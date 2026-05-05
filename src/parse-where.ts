@@ -1,3 +1,32 @@
+// Allowed operators whitelist for security
+const ALLOWED_OPERATORS = new Set([
+  'eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'like', 'in', 'nin', 'elemMatch', 'regex', 'or'
+])
+
+function validateWhereObject(obj: unknown, depth = 0): obj is JsonObject {
+  if (depth > MAX_OBJECT_DEPTH) return false
+  if (!isJSONObject(obj)) return false
+
+  for (const [key, value] of Object.entries(obj)) {
+    // Validate operator names when used with colon notation
+    if (key.includes(':')) {
+      const op = key.split(':').pop()
+      if (op && !ALLOWED_OPERATORS.has(op as WhereOperator)) {
+        return false
+      }
+    }
+    // Recursively validate nested objects
+    if (isJSONObject(value) && !validateWhereObject(value, depth + 1)) {
+      return false
+    }
+  }
+  return true
+}
+
+function isJSONObject(value: unknown): value is JsonObject {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 import { setProperty } from 'dot-prop'
 import type { JsonObject } from 'type-fest'
 
