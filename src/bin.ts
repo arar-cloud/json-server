@@ -18,6 +18,9 @@ import { Observer } from "./adapters/observer.ts";
 import { createApp } from "./app.ts";
 import type { Data } from "./service.ts";
 
+// Security: Optional authentication token from environment
+const AUTH_TOKEN = process.env['AUTH_TOKEN']
+
 function help() {
   console.log(`Usage: json-server [options] <file>
 
@@ -28,6 +31,10 @@ Options:
   --help             Show this message
   --version          Show version number
 `);
+  console.log(chalk.yellow('⚠️  Security Notice:'))
+  console.log('  json-server is for development/testing only.')
+  console.log('  In production, add authentication middleware, use HTTPS, and set ALLOWED_ORIGINS.')
+  console.log('  Example: ALLOWED_ORIGINS=https://app.example.com AUTH_TOKEN=<token> json-server db.json\n')
 }
 
 // Parse args
@@ -141,6 +148,19 @@ await db.read();
 
 // Create app
 const app = createApp(db, { logger: false, static: staticArr });
+
+// Security: If AUTH_TOKEN is set, require Authorization header
+if (AUTH_TOKEN) {
+  app.use((req, _res, next) => {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.slice(7) !== AUTH_TOKEN) {
+      const err = new Error('Unauthorized')
+      ;(err as any).status = 401
+      return next(err)
+    }
+    next()
+  })
+}
 
 function logRoutes(data: Data) {
   console.log(chalk.bold("Endpoints:"));
