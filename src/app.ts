@@ -27,6 +27,22 @@ const eta = new Eta({
 
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
 
+// Security: CORS origin whitelist (allow localhost in dev, restrict in production)
+const allowedOrigins = process.env['NODE_ENV'] === 'production'
+  ? (process.env['ALLOWED_ORIGINS']?.split(',') ?? [])
+  : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000']
+
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error('CORS not allowed'))
+    }
+  },
+  credentials: true,
+}
+
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
   const params = new URLSearchParams(queryString)
@@ -107,13 +123,17 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   // CORS
   app
     .use((req, res, next) => {
-      return cors({
-        allowedHeaders: req.headers['access-control-request-headers']
-          ?.split(',')
-          .map((h) => h.trim()),
-      })(req, res, next)
+      return cors(corsOptions)(req, res, next)
     })
-    .options('*', cors())
+    .options('*', cors(corsOptions))
+
+  // Security: Limit query string length to prevent DoS and injection attacks
+  app.use((req, _res, next) => {
+    if (req.url && req.url.length > 8000) {
+      return next(new Error('Query string too long'))
+    }
+    next()
+  })
 
   // Body parser
   app.use(json())
