@@ -3,7 +3,37 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
+// Security: Input validation constants
+const MAX_STRING_LENGTH = 10000
+const MAX_ARRAY_LENGTH = 1000
+const MAX_OBJECT_DEPTH = 50
+const MAX_NUMBER = 9007199254740991 // Number.MAX_SAFE_INTEGER
+const MIN_NUMBER = -9007199254740991 // -Number.MAX_SAFE_INTEGER
+
+function validateInputDepth(obj: unknown, depth = 0): boolean {
+  if (depth > MAX_OBJECT_DEPTH) return false
+  if (typeof obj === 'object' && obj !== null) {
+    if (Array.isArray(obj)) {
+      if (obj.length > MAX_ARRAY_LENGTH) return false
+      return obj.every((item) => validateInputDepth(item, depth + 1))
+    }
+    return Object.values(obj).every((val) => validateInputDepth(val, depth + 1))
+  }
+  return true
+}
+
+function validateString(str: string): boolean {
+  return str.length <= MAX_STRING_LENGTH
+}
+
+function validateNumber(num: number): boolean {
+  return Number.isFinite(num) && num >= MIN_NUMBER && num <= MAX_NUMBER
+}
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
+  if (!validateString(key)) {
+    throw new Error('Query parameter key exceeds maximum length')
+  }
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
     const path = key.slice(0, colonIdx)
