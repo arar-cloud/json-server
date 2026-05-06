@@ -115,8 +115,8 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     })
     .options('*', cors())
 
-  // Body parser
-  app.use(json())
+  // Body parser with size limit
+  app.use(json({ limit: '1mb' }))
 
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
 
