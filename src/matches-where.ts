@@ -21,7 +21,29 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   return ops
 }
 
+const MAX_FILTER_DEPTH = 10
+const MAX_FILTER_KEYS = 100
+
+function validateFilterDepth(where: JsonObject, depth = 0): boolean {
+  if (depth > MAX_FILTER_DEPTH) return false
+  if (Object.keys(where).length > MAX_FILTER_KEYS) return false
+
+  for (const value of Object.values(where)) {
+    if (isJSONObject(value)) {
+      if (!validateFilterDepth(value, depth + 1)) return false
+    } else if (Array.isArray(value)) {
+      for (const item of value) {
+        if (isJSONObject(item) && !validateFilterDepth(item, depth + 1)) return false
+      }
+    }
+  }
+  return true
+}
+
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
+  if (!validateFilterDepth(where)) {
+    throw new Error('Filter exceeds maximum complexity')
+  }
   for (const [key, value] of Object.entries(where)) {
     if (key === 'or') {
       if (!Array.isArray(value) || value.length === 0) return false
