@@ -20,6 +20,18 @@ function ensureArray(arg: string | string[] = []): string[] {
   return Array.isArray(arg) ? arg : [arg]
 }
 
+function validateResourceName(name: string): boolean {
+  // Allow alphanumeric, underscores, hyphens; prevent directory traversal and special chars
+  return /^[a-zA-Z0-9_-]+$/.test(name) && !name.includes('..')
+}
+
+function sanitizeResourceName(name: string): string {
+  if (!validateResourceName(name)) {
+    throw new Error(`Invalid resource name: ${name}`)
+  }
+  return name
+}
+
 function embed(db: Low<Data>, name: string, item: Item, related: string): Item {
   if (inflection.singularize(related) === related) {
     const relatedData = db.data[inflection.pluralize(related)] as Item[]
