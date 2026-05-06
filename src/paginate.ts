@@ -1,3 +1,6 @@
+const MAX_PER_PAGE = 1000
+const MAX_PAGE = 1000000
+
 export type PaginationResult<T> = {
   first: number
   prev: number | null
