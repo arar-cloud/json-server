@@ -104,10 +104,19 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     ?.map((path) => (isAbsolute(path) ? path : join(process.cwd(), path)))
     .forEach((dir) => app.use(sirv(dir, { dev: !isProduction })))
 
-  // CORS
+  // CORS with origin validation
+  const corsOrigins = process.env.CORS_ORIGINS?.split(',').map((o) => o.trim()) || ['http://localhost:3000']
   app
     .use((req, res, next) => {
       return cors({
+        origin: (origin, callback) => {
+          if (!origin || corsOrigins.includes(origin) || corsOrigins.includes('*')) {
+            callback(null, true)
+          } else {
+            callback(new Error('CORS not allowed'))
+          }
+        },
+        credentials: true,
         allowedHeaders: req.headers['access-control-request-headers']
           ?.split(',')
           .map((h) => h.trim()),
