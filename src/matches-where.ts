@@ -8,6 +8,12 @@ function isJSONObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype', '__constructor__', '__defineGetter__', '__defineSetter__', '__lookupGetter__', '__lookupSetter__'])
+
+function isSafePropertyKey(key: string): boolean {
+  return !DANGEROUS_KEYS.has(key) && !key.startsWith('__')
+}
+
 function getKnownOperators(value: unknown): WhereOperator[] {
   if (!isJSONObject(value)) return []
 
