@@ -51,6 +51,9 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
     throw new Error('Filter exceeds maximum complexity')
   }
   for (const [key, value] of Object.entries(where)) {
+    if (!isSafePropertyKey(key)) {
+      throw new Error(`Unsafe property key: ${key}`)
+    }
     if (key === 'or') {
       if (!Array.isArray(value) || value.length === 0) return false
 
