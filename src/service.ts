@@ -32,6 +32,30 @@ function sanitizeResourceName(name: string): string {
   return name
 }
 
+function validateWhereSchema(obj: unknown): boolean {
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
+    return false
+  }
+
+  for (const [key, value] of Object.entries(obj)) {
+    // Allow only safe keys: strings, property names, operators
+    if (typeof key !== 'string' || key.length === 0 || key.length > 100) {
+      return false
+    }
+    // Reject dangerous patterns
+    if (key.includes('..') || key.includes('__proto__') || key.includes('constructor')) {
+      return false
+    }
+    // Recursively validate nested objects
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      if (!validateWhereSchema(value)) {
+        return false
+      }
+    }
+  }
+  return true
+}
+
 function embed(db: Low<Data>, name: string, item: Item, related: string): Item {
   if (inflection.singularize(related) === related) {
     const relatedData = db.data[inflection.pluralize(related)] as Item[]
