@@ -153,6 +153,19 @@ export class Service {
       embed?: string | string[]
     },
   ): Item[] | PaginatedItems | Item | undefined {
+    // Validate _where parameter if present
+    if (opts.where && typeof opts.where === 'string') {
+      try {
+        const whereObj = JSON.parse(opts.where as any)
+        if (!validateWhereSchema(whereObj)) {
+          throw new Error('Invalid _where schema')
+        }
+        opts.where = whereObj as JsonObject
+      } catch (err) {
+        throw new Error(`Invalid _where parameter: ${err instanceof Error ? err.message : 'parse error'}`)
+      }
+    }
+
     const items = this.#get(name)
 
     if (!Array.isArray(items)) {
