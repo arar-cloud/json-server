@@ -127,6 +127,16 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   // Body parser with size limit
   app.use(json({ limit: '1mb' }))
 
+  // Security headers middleware
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.setHeader('X-Frame-Options', 'DENY')
+    res.setHeader('X-XSS-Protection', '1; mode=block')
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'")
+    next()
+  })
+
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
 
   app.get('/:name', (req, res, next) => {
