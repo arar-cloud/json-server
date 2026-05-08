@@ -112,7 +112,24 @@ function args(): {
   }
 }
 
-const { file, port, host, static: staticArr } = args();
+let { file, port, host, static: staticArr } = args();
+
+// Validate and normalize file path from CLI arguments to prevent path traversal
+if (!file) {
+  console.error('Error: database file path required as first argument');
+  process.exit(1);
+}
+
+// Prevent path traversal by ensuring resolved path is within current working directory
+const { normalize, resolve } = await import('node:path');
+const resolvedPath = resolve(normalize(file));
+const cwd = resolve(process.cwd());
+if (!resolvedPath.startsWith(cwd)) {
+  console.error('Error: database file path must be within current working directory');
+  process.exit(1);
+}
+
+file = resolvedPath;
 
 if (!existsSync(file)) {
   console.log(chalk.red(`File ${file} not found`));
