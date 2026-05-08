@@ -26,6 +26,19 @@ const eta = new Eta({
 })
 
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
+const MAX_QUERY_DEPTH = 3
+const MAX_QUERY_PARAM_SIZE = 2000
+
+function validateQueryParamDepth(obj: unknown, depth = 0): boolean {
+  if (depth > MAX_QUERY_DEPTH) return false
+  if (typeof obj !== 'object' || obj === null) return true
+  if (Array.isArray(obj)) return obj.every(item => validateQueryParamDepth(item, depth + 1))
+  return Object.values(obj).every(val => validateQueryParamDepth(val, depth + 1))
+}
+
+function validateQueryParamSize(str: string): boolean {
+  return str.length <= MAX_QUERY_PARAM_SIZE
+}
 
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
@@ -34,6 +47,9 @@ function parseListParams(req: any) {
   const filterParams = new URLSearchParams()
   for (const [key, value] of params.entries()) {
     if (!RESERVED_QUERY_KEYS.has(key)) {
+      if (!validateQueryParamSize(value)) {
+        throw new Error('Query parameter size limit exceeded')
+      }
       filterParams.append(key, value)
     }
   }
@@ -49,6 +65,10 @@ function parseListParams(req: any) {
     } catch {
       // Ignore invalid JSON and fallback to parsed query params
     }
+  }
+
+  if (!validateQueryParamDepth(where)) {
+    throw new Error('Query parameter nesting depth limit exceeded')
   }
 
   const pageRaw = params.get('_page')
