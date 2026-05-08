@@ -75,13 +75,24 @@ function parseListParams(req: any) {
   let where = parseWhere(filterParams.toString())
   const rawWhere = params.get('_where')
   if (typeof rawWhere === 'string') {
+    // Validate JSON string size before parsing
+    if (rawWhere.length > 3000) {
+      throw new Error('_where parameter size limit exceeded')
+    }
     try {
       const parsed = JSON.parse(rawWhere)
       if (typeof parsed === 'object' && parsed !== null) {
+        // Validate depth of parsed JSON before using
+        if (!validateQueryParamDepth(parsed)) {
+          throw new Error('_where parameter nesting depth limit exceeded')
+        }
         where = parsed
       }
-    } catch {
-      // Ignore invalid JSON and fallback to parsed query params
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('depth limit')) {
+        throw err
+      }
+      // Ignore invalid JSON parse errors and fallback to parsed query params
     }
   }
 
