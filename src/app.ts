@@ -166,12 +166,12 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   })
 
   // CSRF Protection: Origin validation for state-modifying endpoints
-  const ALLOWED_ORIGINS = process.env['ALLOWED_ORIGINS']?.split(',') || ['http://localhost:3000', 'http://localhost:3001']
+  const ALLOWED_ORIGINS = (process.env['ALLOWED_ORIGINS'] || 'http://localhost:3000,http://localhost:3001').split(',')
   app.use((req, res, next) => {
     const origin = req.headers['origin']
     const method = req.method
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-      if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+      if (origin && !ALLOWED_ORIGINS.includes(origin.trim())) {
         return res.status(403).json({ error: 'CSRF protection: origin not allowed' })
       }
     }
@@ -182,6 +182,9 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   app
     .use((req, res, next) => {
       return cors({
+        origin: ALLOWED_ORIGINS.map(o => o.trim()),
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: req.headers['access-control-request-headers']
           ?.split(',')
           .map((h) => h.trim()),
