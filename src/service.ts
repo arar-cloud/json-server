@@ -106,6 +106,12 @@ export class Service {
   }
 
   findById(name: string, id: string, query: { _embed?: string[] | string }): Item | undefined {
+    if (!validateCollectionName(name)) {
+      throw new Error(`Invalid collection name: ${name}`)
+    }
+    if (!validateItemId(id)) {
+      throw new Error(`Invalid item ID: ${id}`)
+    }
     const value = this.#get(name)
 
     if (Array.isArray(value)) {
@@ -129,6 +135,9 @@ export class Service {
       embed?: string | string[]
     },
   ): Item[] | PaginatedItems | Item | undefined {
+    if (!validateCollectionName(name)) {
+      throw new Error(`Invalid collection name: ${name}`)
+    }
     const items = this.#get(name)
 
     if (!Array.isArray(items)) {
@@ -155,6 +164,9 @@ export class Service {
   }
 
   async create(name: string, data: Omit<Item, 'id'> = {}): Promise<Item | undefined> {
+    if (!validateCollectionName(name)) {
+      throw new Error(`Invalid collection name: ${name}`)
+    }
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
 
@@ -166,6 +178,9 @@ export class Service {
   }
 
   async #updateOrPatch(name: string, body: Item = {}, isPatch: boolean): Promise<Item | undefined> {
+    if (!validateCollectionName(name)) {
+      throw new Error(`Invalid collection name: ${name}`)
+    }
     const item = this.#get(name)
     if (item === undefined || Array.isArray(item)) return
 
@@ -181,6 +196,12 @@ export class Service {
     body: Item = {},
     isPatch: boolean,
   ): Promise<Item | undefined> {
+    if (!validateCollectionName(name)) {
+      throw new Error(`Invalid collection name: ${name}`)
+    }
+    if (!validateItemId(id)) {
+      throw new Error(`Invalid item ID: ${id}`)
+    }
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
 
@@ -216,6 +237,12 @@ export class Service {
     id: string,
     dependent?: string | string[],
   ): Promise<Item | undefined> {
+    if (!validateCollectionName(name)) {
+      throw new Error(`Invalid collection name: ${name}`)
+    }
+    if (!validateItemId(id)) {
+      throw new Error(`Invalid item ID: ${id}`)
+    }
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
 
