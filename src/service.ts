@@ -10,6 +10,18 @@ export type Item = Record<string, unknown>
 
 export type Data = Record<string, Item[] | Item>
 
+// Whitelist allowed collection name pattern: alphanumeric and underscore
+const VALID_COLLECTION_NAME_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/
+const VALID_ID_PATTERN = /^[a-zA-Z0-9_-]+$/
+
+function validateCollectionName(name: string): boolean {
+  return VALID_COLLECTION_NAME_PATTERN.test(name) && name.length <= 64
+}
+
+function validateItemId(id: string): boolean {
+  return VALID_ID_PATTERN.test(id) && id.length <= 128
+}
+
 export function isItem(obj: unknown): obj is Item {
   return typeof obj === 'object' && obj !== null && !Array.isArray(obj)
 }
