@@ -6,6 +6,18 @@ import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 const MAX_WHERE_DEPTH = 5
 const MAX_WHERE_SIZE = 5000
 
+const ALLOWED_FIELD_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*$/
+const INTERNAL_FIELD_BLOCKLIST = new Set(['__proto__', 'constructor', 'prototype', 'password', 'secret', 'apiKey', 'token'])
+
+function validateFieldName(field: string): boolean {
+  // Check pattern: alphanumeric and underscore, dot-notation for nested
+  if (!ALLOWED_FIELD_PATTERN.test(field)) return false
+  
+  // Check each segment against blocklist
+  const segments = field.split('.')
+  return !segments.some(segment => INTERNAL_FIELD_BLOCKLIST.has(segment))
+}
+
 function validateWhereDepth(obj: unknown, depth = 0): boolean {
   if (depth > MAX_WHERE_DEPTH) return false
   if (typeof obj !== 'object' || obj === null) return true
@@ -26,7 +38,16 @@ function splitKey(key: string): { path: string; op: WhereOperator | null } {
       return { path: key, op: 'eq' }
     }
 
-    return isWhereOperator(op) ? { path, op } : { path, op: null }
+    if (!isWhereOperator(op)) {
+      return { path, op: null }
+    }
+    
+    // Validate field name before returning
+    if (!validateFieldName(path)) {
+      throw new Error(`Invalid field name: ${path}`)
+    }
+    
+    return { path, op }
   }
 
   // Compatibility with v0.17 operator style (e.g. _lt, _gt)
@@ -35,6 +56,10 @@ function splitKey(key: string): { path: string; op: WhereOperator | null } {
     const path = underscoreMatch[1]
     const op = underscoreMatch[2]
     if (path && isWhereOperator(op)) {
+      // Validate field name before returning
+      if (!validateFieldName(path)) {
+        throw new Error(`Invalid field name: ${path}`)
+      }
       return { path, op }
     }
   }
