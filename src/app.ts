@@ -177,6 +177,15 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     return resolved
   }
 
+  // Security headers middleware for static files
+  app.use((req, res, next) => {
+    res.set('X-Content-Type-Options', 'nosniff')
+    res.set('Cache-Control', 'public, max-age=3600, must-revalidate')
+    res.set('X-Frame-Options', 'DENY')
+    res.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'")
+    next()
+  })
+
   app.use(sirv('public', { dev: !isProduction }))
   options.static
     ?.map((path) => (isAbsolute(path) ? path : join(process.cwd(), path)))
