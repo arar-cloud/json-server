@@ -1,4 +1,4 @@
-import { dirname, isAbsolute, join } from 'node:path'
+import { dirname, isAbsolute, join, normalize, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { App } from '@tinyhttp/app'
@@ -119,10 +119,23 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   // Create app
   const app = new App()
 
-  // Static files
+  // Static files with path traversal protection
+  function validateStaticPath(basePath: string): string {
+    const normalized = normalize(basePath)
+    const resolved = resolve(process.cwd(), normalized)
+    const base = resolve(process.cwd())
+    
+    if (!resolved.startsWith(base)) {
+      throw new Error('Invalid static path: attempting to access outside root')
+    }
+    
+    return resolved
+  }
+
   app.use(sirv('public', { dev: !isProduction }))
   options.static
     ?.map((path) => (isAbsolute(path) ? path : join(process.cwd(), path)))
+    .map((path) => validateStaticPath(path))
     .forEach((dir) => app.use(sirv(dir, { dev: !isProduction })))
 
   // CSRF Protection: SameSite cookie policy
