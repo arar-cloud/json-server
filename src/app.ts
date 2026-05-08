@@ -127,6 +127,21 @@ function withIdAndBody(
 export function createApp(db: Low<Data>, options: AppOptions = {}) {
   // Create service
   const service = new Service(db)
+  
+  // API Key authentication middleware (if configured)
+  const apiKeyMiddleware = (req: any, res: any, next: any) => {
+    // Skip auth check for GET requests to list endpoint if no apiKey configured
+    if (!options.apiKey) {
+      return next()
+    }
+    
+    // For protected endpoints with apiKey requirement
+    const requestApiKey = req.headers['x-api-key']
+    if (!requestApiKey || requestApiKey !== options.apiKey) {
+      return res.status(401).json({ error: 'Unauthorized: invalid or missing API key' })
+    }
+    next()
+  }
 
   // Create app
   const app = new App()
