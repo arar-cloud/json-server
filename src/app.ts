@@ -41,6 +41,16 @@ function validateQueryParamSize(str: string): boolean {
   return str.length <= MAX_QUERY_PARAM_SIZE
 }
 
+function validateSortParam(sortParam: any): string | undefined {
+  if (!sortParam) return undefined
+  const str = String(sortParam)
+  // Allow field names with optional -prefix for descending, alphanumeric and underscore only
+  if (/^-?[a-zA-Z0-9_,\s]+$/.test(str)) {
+    return str
+  }
+  return undefined
+}
+
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
   const params = new URLSearchParams(queryString)
@@ -76,10 +86,12 @@ function parseListParams(req: any) {
   const perPageRaw = params.get('_per_page')
   const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
   const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
+  const rawSort = params.get('_sort')
+  const sort = validateSortParam(rawSort)
 
   return {
     where,
-    sort: params.get('_sort') ?? undefined,
+    sort,
     page: Number.isNaN(page) ? undefined : page,
     perPage: Number.isNaN(perPage) ? undefined : perPage,
     embed: req.query['_embed'],
