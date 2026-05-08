@@ -53,6 +53,13 @@ function validateSortParam(sortParam: any): string | undefined {
 
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
+  
+  // Validate cumulative query string size to prevent DoS
+  const MAX_QUERY_STRING_SIZE = 5000
+  if (queryString.length > MAX_QUERY_STRING_SIZE) {
+    throw new Error('Query string size limit exceeded')
+  }
+  
   const params = new URLSearchParams(queryString)
 
   const filterParams = new URLSearchParams()
