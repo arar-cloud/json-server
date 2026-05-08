@@ -24,6 +24,9 @@ export type AppOptions = {
 const eta = new Eta({
   views: join(__dirname, '../views'),
   cache: isProduction,
+  autoEscape: true,
+  useWith: false,
+  varName: 'locals',
 })
 
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
