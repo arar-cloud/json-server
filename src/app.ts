@@ -230,7 +230,9 @@ app.use((req, res, next) => {
   next()
 })
 
-app.use(json())
+const MAX_REQUEST_SIZE = '1mb'
+
+app.use(json({ limit: MAX_REQUEST_SIZE }))
 
 app.use((req, res, next) => {
   const method = req.method
