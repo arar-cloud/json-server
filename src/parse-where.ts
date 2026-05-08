@@ -3,6 +3,20 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
+const MAX_WHERE_DEPTH = 5
+const MAX_WHERE_SIZE = 5000
+
+function validateWhereDepth(obj: unknown, depth = 0): boolean {
+  if (depth > MAX_WHERE_DEPTH) return false
+  if (typeof obj !== 'object' || obj === null) return true
+  if (Array.isArray(obj)) return obj.every(item => validateWhereDepth(item, depth + 1))
+  return Object.values(obj).every(val => validateWhereDepth(val, depth + 1))
+}
+
+function validateWhereSize(str: string): boolean {
+  return str.length <= MAX_WHERE_SIZE
+}
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
@@ -56,6 +70,10 @@ function coerceValue(value: string): string | number | boolean | null {
 }
 
 export function parseWhere(query: string): JsonObject {
+  if (!validateWhereSize(query)) {
+    throw new Error('Where clause exceeds maximum size')
+  }
+
   const out: JsonObject = {}
   const params = new URLSearchParams(query)
 
@@ -63,6 +81,10 @@ export function parseWhere(query: string): JsonObject {
     const { path, op } = splitKey(rawKey)
     if (op === null) continue
     setPathOp(out, path, op, rawValue)
+  }
+
+  if (!validateWhereDepth(out)) {
+    throw new Error('Where clause exceeds maximum nesting depth')
   }
 
   return out
