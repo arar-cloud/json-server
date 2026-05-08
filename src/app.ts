@@ -284,17 +284,17 @@ app.use((req, res, next) => {
     next?.()
   })
 
-  app.post('/:name', withBody(service.create.bind(service)))
+  app.post('/:name', apiKeyMiddleware, withBody(service.create.bind(service)))
 
-  app.put('/:name', withBody(service.update.bind(service)))
+  app.put('/:name', apiKeyMiddleware, withBody(service.update.bind(service)))
 
-  app.put('/:name/:id', withIdAndBody(service.updateById.bind(service)))
+  app.put('/:name/:id', apiKeyMiddleware, withIdAndBody(service.updateById.bind(service)))
 
-  app.patch('/:name', withBody(service.patch.bind(service)))
+  app.patch('/:name', apiKeyMiddleware, withBody(service.patch.bind(service)))
 
-  app.patch('/:name/:id', withIdAndBody(service.patchById.bind(service)))
+  app.patch('/:name/:id', apiKeyMiddleware, withIdAndBody(service.patchById.bind(service)))
 
-  app.delete('/:name/:id', async (req, res, next) => {
+  app.delete('/:name/:id', apiKeyMiddleware, async (req, res, next) => {
     const { name = '', id = '' } = req.params
     res.locals['data'] = await service.destroyById(name, id, req.query['_dependent'])
     next?.()
