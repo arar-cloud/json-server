@@ -42,6 +42,31 @@ export class NormalizedAdapter implements Adapter<Data> {
   }
 
   async write(data: Data): Promise<void> {
+    // Validate transformed data before writing
+    if (!this.validateAdapterOutput(data)) {
+      throw new Error('Adapter output validation failed: transformed data does not conform to schema')
+    }
     await this.#adapter.write({ ...data, $schema: DEFAULT_SCHEMA_PATH })
+  }
+
+  private validateAdapterOutput(obj: unknown): boolean {
+    if (typeof obj !== 'object' || obj === null) return false
+    
+    for (const [key, value] of Object.entries(obj)) {
+      // Key must be string
+      if (typeof key !== 'string') return false
+      
+      // Only allow array or object values
+      if (!Array.isArray(value) && (typeof value !== 'object' || value === null)) return false
+      
+      // If array, validate items are objects
+      if (Array.isArray(value)) {
+        if (!value.every(item => typeof item === 'object' && item !== null && !Array.isArray(item))) {
+          return false
+        }
+      }
+    }
+    
+    return true
   }
 }
