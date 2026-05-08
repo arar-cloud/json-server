@@ -190,7 +190,30 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     .options('*', cors())
 
   // Body parser
-  app.use((req, res, next) => {
+  function validateBodyTypes(obj: any, depth = 0): { valid: boolean; error?: string } {
+  if (depth > 10) return { valid: false, error: 'Body nesting too deep' }
+  if (obj === null) return { valid: false, error: 'Null values not allowed in request body' }
+  if (Array.isArray(obj)) return { valid: false, error: 'Arrays not allowed at top level' }
+  
+  if (typeof obj === 'object') {
+    for (const [key, value] of Object.entries(obj)) {
+      if (typeof key !== 'string') {
+        return { valid: false, error: 'Field names must be strings' }
+      }
+      if (Array.isArray(value) && typeof value !== 'string') {
+        return { valid: false, error: `Field ${key}: unexpected array type` }
+      }
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        const nested = validateBodyTypes(value, depth + 1)
+        if (!nested.valid) return nested
+      }
+    }
+  }
+  
+  return { valid: true }
+}
+
+app.use((req, res, next) => {
   const method = req.method
   const contentType = req.headers['content-type'] || ''
   
@@ -205,6 +228,19 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
 })
 
 app.use(json())
+
+app.use((req, res, next) => {
+  const method = req.method
+  
+  if (['POST', 'PUT', 'PATCH'].includes(method) && req.body) {
+    const validation = validateBodyTypes(req.body)
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.error })
+    }
+  }
+  
+  next()
+})
 
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
 
