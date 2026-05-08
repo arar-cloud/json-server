@@ -124,6 +124,34 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     ?.map((path) => (isAbsolute(path) ? path : join(process.cwd(), path)))
     .forEach((dir) => app.use(sirv(dir, { dev: !isProduction })))
 
+  // CSRF Protection: SameSite cookie policy
+  app.use((req, res, next) => {
+    const originalSetCookie = res.setHeader
+    res.setHeader = function(name: string, value: any) {
+      if (name.toLowerCase() === 'set-cookie') {
+        const cookieValue = typeof value === 'string' ? value : String(value)
+        if (!cookieValue.includes('SameSite')) {
+          value = cookieValue + '; SameSite=Strict; HttpOnly'
+        }
+      }
+      return originalSetCookie.call(this, name, value)
+    }
+    next()
+  })
+
+  // CSRF Protection: Origin validation for state-modifying endpoints
+  const ALLOWED_ORIGINS = process.env['ALLOWED_ORIGINS']?.split(',') || ['http://localhost:3000', 'http://localhost:3001']
+  app.use((req, res, next) => {
+    const origin = req.headers['origin']
+    const method = req.method
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+      if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+        return res.status(403).json({ error: 'CSRF protection: origin not allowed' })
+      }
+    }
+    next()
+  })
+
   // CORS
   app
     .use((req, res, next) => {
