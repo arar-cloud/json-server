@@ -2,6 +2,8 @@ import { dirname, isAbsolute, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { App } from '@tinyhttp/app'
+
+const REQUEST_TIMEOUT_MS = 30000 // 30 seconds
 import { cors } from '@tinyhttp/cors'
 import { Eta } from 'eta'
 import { Low } from 'lowdb'
@@ -108,6 +110,22 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   options.static
     ?.map((path) => (isAbsolute(path) ? path : join(process.cwd(), path)))
     .forEach((dir) => app.use(sirv(dir, { dev: !isProduction })))
+
+  // Request timeout middleware
+  app.use((req, res, next) => {
+    const timeoutId = setTimeout(() => {
+      if (!res.headersSent) {
+        console.warn(`[json-server] Request timeout for ${req.method} ${req.path}`)
+        res.status(408).send({ error: 'Request timeout' })
+      }
+    }, REQUEST_TIMEOUT_MS)
+
+    res.on('finish', () => {
+      clearTimeout(timeoutId)
+    })
+
+    next()
+  })
 
   // CORS
   app
