@@ -3,7 +3,14 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
+const MAX_PARSE_DEPTH = 50
+const MAX_VALUE_LENGTH = 1e6
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
+  if (key.length > MAX_VALUE_LENGTH) {
+    throw new Error(`Key exceeds maximum length of ${MAX_VALUE_LENGTH}`)
+  }
+  
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
     const path = key.slice(0, colonIdx)
@@ -58,10 +65,18 @@ function coerceValue(value: string): string | number | boolean | null {
 export function parseWhere(query: string): JsonObject {
   const out: JsonObject = {}
   const params = new URLSearchParams(query)
+  let depth = 0
 
   for (const [rawKey, rawValue] of params.entries()) {
+    depth++
+    if (depth > MAX_PARSE_DEPTH) {
+      throw new Error(`Parse depth exceeds maximum of ${MAX_PARSE_DEPTH}`)
+    }
     const { path, op } = splitKey(rawKey)
     if (op === null) continue
+    if (rawValue.length > MAX_VALUE_LENGTH) {
+      throw new Error(`Value for key '${rawKey}' exceeds maximum length of ${MAX_VALUE_LENGTH}`)
+    }
     setPathOp(out, path, op, rawValue)
   }
 
