@@ -162,7 +162,7 @@ function randomItem(items: string[]): string {
   return items.at(index) ?? "";
 }
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(
     [
       chalk.bold(`JSON Server started on PORT :${port}`),
@@ -181,6 +181,41 @@ app.listen(port, () => {
   );
   logRoutes(db.data);
 });
+
+// Graceful shutdown handlers
+let isShuttingDown = false;
+
+async function gracefulShutdown(signal: string) {
+  if (isShuttingDown) {
+    console.log(`[json-server] Already shutting down, forcing exit on ${signal}`);
+    process.exit(1);
+  }
+
+  isShuttingDown = true;
+  console.log(`[json-server] Received ${signal}, initiating graceful shutdown...`);
+
+  // Stop accepting new connections
+  server.close(async () => {
+    console.log(`[json-server] HTTP server closed`);
+    // Ensure database is synced before exit
+    try {
+      await db.write();
+      console.log(`[json-server] Database synced successfully`);
+    } catch (err) {
+      console.error(`[json-server] Error syncing database during shutdown:`, err);
+    }
+    process.exit(0);
+  });
+
+  // Force shutdown after 30 seconds
+  setTimeout(() => {
+    console.error(`[json-server] Forced shutdown after timeout`);
+    process.exit(1);
+  }, 30000);
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 // Watch file for changes
 if (process.env["NODE_ENV"] !== "production") {
