@@ -16,21 +16,35 @@ export class Observer<T> {
   onWriteEnd = function () {
     return
   }
+  onError: (err: Error) => void = function () {
+    return
+  }
+
+  private safeExecute<R>(fn: () => R, context: string): R | undefined {
+    try {
+      return fn()
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err))
+      console.error(`[json-server] Observer error in ${context}: ${error.message}`)
+      this.onError(error)
+      return undefined
+    }
+  }
 
   constructor(adapter: Adapter<T>) {
     this.#adapter = adapter
   }
 
   async read() {
-    this.onReadStart()
+    this.safeExecute(() => this.onReadStart(), 'onReadStart')
     const data = await this.#adapter.read()
-    this.onReadEnd(data)
+    this.safeExecute(() => this.onReadEnd(data), 'onReadEnd')
     return data
   }
 
   async write(arg: T) {
-    this.onWriteStart()
+    this.safeExecute(() => this.onWriteStart(), 'onWriteStart')
     await this.#adapter.write(arg)
-    this.onWriteEnd()
+    this.safeExecute(() => this.onWriteEnd(), 'onWriteEnd')
   }
 }
