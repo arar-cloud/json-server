@@ -52,7 +52,7 @@ function parseListParams(req: any) {
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err)
       console.error(`[json-server] Failed to parse _where parameter: ${errorMsg}`, { rawWhere })
-      throw new Error(`Invalid _where parameter: ${errorMsg}`)
+      throw new Error(`Invalid _where parameter: malformed JSON`)
     }
   }
 
@@ -112,6 +112,19 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   // CORS
   app
     .use((req, res, next) => {
+      // Validate and set CORS headers per-request
+      const origin = req.get('origin')
+      
+      // Explicitly set CORS headers
+      res.header('Access-Control-Allow-Credentials', 'true')
+      res.header('Access-Control-Allow-Origin', origin || '*')
+      res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE')
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Accept, X-Requested-With, remember-me')
+      res.header('Access-Control-Max-Age', '86400')
+      
+      if (req.method === 'OPTIONS') {
+        return res.status(204).send()
+      }
       return cors({
         allowedHeaders: req.headers['access-control-request-headers']
           ?.split(',')
