@@ -24,6 +24,25 @@ function ensureArray(arg: string | string[] = []): string[] {
   return Array.isArray(arg) ? arg : [arg]
 }
 
+export function parseListParams(
+  query: URLSearchParams
+): { where: Record<string, unknown>; params: Record<string, unknown> } {
+  // Single-pass iteration instead of double-parsing to avoid redundant allocations
+  const where: Record<string, unknown> = {}
+  const params: Record<string, unknown> = {}
+  const reserved = new Set(['_sort', '_order', '_page', '_limit', '_embed'])
+
+  for (const [key, value] of query.entries()) {
+    if (reserved.has(key)) {
+      params[key] = value
+    } else {
+      where[key] = value
+    }
+  }
+
+  return { where, params }
+}
+
 function getSortFunction(sortKey: string): (items: unknown[]) => unknown[] {
   // Check cache first to avoid recomputation for identical sort keys
   if (sortFunctionCache.has(sortKey)) {
