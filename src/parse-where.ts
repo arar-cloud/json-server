@@ -6,6 +6,10 @@ import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 // ReDoS protection: max input length to prevent regex catastrophic backtracking
 const MAX_WHERE_KEY_LENGTH = 500
 
+// DoS protection: query complexity limits
+const MAX_QUERY_DEPTH = 10
+const MAX_KEYS_PER_LEVEL = 50
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   // Validate input length to prevent ReDoS attacks
   if (key.length > MAX_WHERE_KEY_LENGTH) {
@@ -66,6 +70,20 @@ function coerceValue(value: string): string | number | boolean | null {
 export function parseWhere(query: string): JsonObject {
   const out: JsonObject = {}
   const params = new URLSearchParams(query)
+
+  // Validate total parameter count at top level
+  let paramCount = 0
+  for (const [rawKey] of params.entries()) {
+    paramCount++
+    if (paramCount > MAX_KEYS_PER_LEVEL) {
+      return { __error: 'Query exceeds maximum parameter limit' }
+    }
+    // Validate nesting depth in key path
+    const depth = (rawKey.match(/\./g) || []).length
+    if (depth > MAX_QUERY_DEPTH) {
+      return { __error: 'Query key path exceeds maximum nesting depth' }
+    }
+  }
 
   for (const [rawKey, rawValue] of params.entries()) {
     const { path, op } = splitKey(rawKey)
