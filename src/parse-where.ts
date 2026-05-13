@@ -3,7 +3,14 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
+// ReDoS protection: max input length to prevent regex catastrophic backtracking
+const MAX_WHERE_KEY_LENGTH = 500
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
+  // Validate input length to prevent ReDoS attacks
+  if (key.length > MAX_WHERE_KEY_LENGTH) {
+    return { path: key, op: null }
+  }
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
     const path = key.slice(0, colonIdx)
@@ -16,6 +23,7 @@ function splitKey(key: string): { path: string; op: WhereOperator | null } {
   }
 
   // Compatibility with v0.17 operator style (e.g. _lt, _gt)
+  // Regex is safe with length validation above; pattern is simple and bounded
   const underscoreMatch = key.match(/^(.*)_([a-z]+)$/)
   if (underscoreMatch) {
     const path = underscoreMatch[1]
