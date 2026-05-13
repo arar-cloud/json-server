@@ -223,8 +223,27 @@ export class Service {
       results = results.map((item) => embed(this.#db, name, item, related))
     })
 
-    // Apply filters and early termination for paginated queries
-    results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
+    // Apply filters with lazy evaluation and early termination for paginated queries
+    // For paginated requests, only filter as many items as needed to avoid full dataset scans
+    const hasLimitOrPagination = opts.page !== undefined
+    const maxItemsNeeded = hasLimitOrPagination ? ((opts.page ?? 1) * (opts.perPage ?? 10)) : undefined
+    
+    if (maxItemsNeeded !== undefined && maxItemsNeeded > 0) {
+      // Lazy filter: collect only as many matching items as needed
+      const filtered: Item[] = []
+      for (const item of results) {
+        if (matchesWhere(item as JsonObject, opts.where)) {
+          filtered.push(item)
+          // Collect slightly more than needed to account for sort changes
+          if (filtered.length >= maxItemsNeeded * 2) {
+            break
+          }
+        }
+      }
+      results = filtered
+    } else {
+      results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
+    }
 
     if (opts.sort) {
       // Use memoized sort function to avoid recomputation for repeated sort keys
@@ -232,15 +251,9 @@ export class Service {
       results = sortFn(results) as Item[]
     }
 
-    // For paginated queries, slice early to avoid processing beyond page boundary
+    // For paginated queries, apply pagination directly
     if (opts.page !== undefined) {
-      const perPage = opts.perPage ?? 10
-      // Early termination: only keep what pagination needs plus margin for offset
-      const maxNeeded = opts.page * perPage
-      if (results.length > maxNeeded) {
-        results = results.slice(0, maxNeeded)
-      }
-      return paginate(results, opts.page, perPage)
+      return paginate(results, opts.page, opts.perPage ?? 10)
     }
 
     return results
