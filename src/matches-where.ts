@@ -21,23 +21,20 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   return ops
 }
 
-// Pre-compiled regex patterns and operator cache to avoid recomputation per request
-const OPERATOR_PATTERN = /^(eq|ne|lt|lte|gt|gte|like|in|nin|regex)$/
+// Operator dispatch map for O(1) lookup instead of regex/string comparison
 const OPERATOR_MAP = new Map<string, (a: unknown, b: unknown) => boolean>([
   ['eq', (a, b) => a === b],
   ['ne', (a, b) => a !== b],
-  ['lt', (a, b) => a < b],
-  ['lte', (a, b) => a <= b],
-  ['gt', (a, b) => a > b],
-  ['gte', (a, b) => a >= b],
+  ['lt', (a, b) => (a as any) < (b as any)],
+  ['lte', (a, b) => (a as any) <= (b as any)],
+  ['gt', (a, b) => (a as any) > (b as any)],
+  ['gte', (a, b) => (a as any) >= (b as any)],
+  ['in', (a, b) => Array.isArray(b) ? b.some((v) => (a as any) === (v as any)) : false],
+  ['nin', (a, b) => Array.isArray(b) ? !b.some((v) => (a as any) === (v as any)) : true],
 ])
 
 // Cache compiled regex patterns to avoid recompilation
 const regexCache = new Map<string, RegExp>()
-
-function getOperatorFunction(op: string): ((a: unknown, b: unknown) => boolean) | null {
-  return OPERATOR_MAP.get(op) || null
-}
 
 function getCachedRegex(pattern: string, flags?: string): RegExp {
   const key = `${pattern}:${flags || ''}`
@@ -80,8 +77,12 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
         if (knownOps.includes('eq') && !((field as any) === (op.eq as any))) return false
         if (knownOps.includes('ne') && !((field as any) !== (op.ne as any))) return false
         if (knownOps.includes('in')) {
-          const inValues = Array.isArray(op.in) ? op.in : [op.in]
-          if (!inValues.some((v) => (field as any) === (v as any))) return false
+          const handler = OPERATOR_MAP.get('in')
+          if (!handler || !handler(field, op.in)) return false
+        }
+        if (knownOps.includes('nin')) {
+          const handler = OPERATOR_MAP.get('nin')
+          if (!handler || !handler(field, op.nin)) return false
         }
         if (knownOps.includes('contains')) {
           if (typeof field !== 'string') return false
