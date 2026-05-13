@@ -33,7 +33,7 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
           break
         }
       }
-
+      // Short-circuit: return immediately on failure to avoid further traversal
       if (!matched) return false
       continue
     }
@@ -73,14 +73,18 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
       }
 
       if (isJSONObject(field)) {
+        // Short-circuit: nested object must match or fail immediately
         if (!matchesWhere(field, value)) return false
+      } else {
+        // Type mismatch detected: stop processing
+        return false
       }
-
       continue
     }
 
     if (field === undefined) return false
-
+    
+    // Primitive value mismatch
     return false
   }
 
