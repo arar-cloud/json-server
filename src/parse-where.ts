@@ -41,6 +41,12 @@ const MAX_QUERY_LENGTH = 2048
 const MAX_QUERY_DEPTH = 10
 const MAX_KEYS_PER_LEVEL = 50
 
+// Pre-compiled operator validation pattern (avoid regex recompilation on each check)
+const OPERATOR_PATTERN = /^[a-z]+$/
+
+// Pre-compiled Set for O(1) operator lookup instead of repeated regex matching
+const KNOWN_OPERATORS = new Set(['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in'])
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   // Validate input length to prevent ReDoS attacks
   if (key.length > MAX_WHERE_KEY_LENGTH) {
@@ -63,8 +69,11 @@ function splitKey(key: string): { path: string; op: WhereOperator | null } {
   if (underscoreMatch) {
     const path = underscoreMatch[1]
     const op = underscoreMatch[2]
-    if (path && isWhereOperator(op)) {
-      return { path, op }
+    // Use pre-compiled Set for O(1) operator validation before isWhereOperator call
+    if (path && OPERATOR_PATTERN.test(op) && KNOWN_OPERATORS.has(op)) {
+      if (isWhereOperator(op)) {
+        return { path, op }
+      }
     }
   }
 
