@@ -113,11 +113,16 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   const corsHandler = cors()
   const corsOptions = { origin: '*', credentials: true }
 
-  // Static files
-  app.use(sirv('public', { dev: !isProduction }))
+  // Static files - enable caching of file metadata to reduce stat() syscalls
+  const sirvOptions = {
+    dev: !isProduction,
+    maxAge: 60 * 1000, // Cache metadata for 60 seconds (TTL)
+    immutable: !isProduction, // Mark assets as immutable in dev to avoid repeated stat checks
+  }
+  app.use(sirv('public', sirvOptions))
   options.static
     ?.map((path) => (isAbsolute(path) ? path : join(process.cwd(), path)))
-    .forEach((dir) => app.use(sirv(dir, { dev: !isProduction })))
+    .forEach((dir) => app.use(sirv(dir, sirvOptions)))
 
   // Body parser (before CORS to filter static routes first)
   app.use(json())
