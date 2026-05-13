@@ -57,48 +57,15 @@ function ensureArray(arg: string | string[] = []): string[] {
   return Array.isArray(arg) ? arg : [arg]
 }
 
+// Note: parseListParams is now centralized in app.ts via parseWhere() to avoid
+// double-parsing inefficiency. This stub is kept for backward compatibility.
+// Use app.ts parseListParams instead.
 export function parseListParams(
   query: URLSearchParams
 ): { where: Record<string, unknown>; params: Record<string, unknown> } {
-  // Single-pass iteration instead of double-parsing to avoid redundant allocations
-  const where: Record<string, unknown> = {}
-  const params: Record<string, unknown> = {}
-  const reserved = new Set(['_sort', '_order', '_page', '_limit', '_embed', '_where'])
-  let rawWhere: string | null = null
-
-  for (const [key, value] of query.entries()) {
-    if (reserved.has(key)) {
-      if (key === '_where') {
-        rawWhere = value
-      } else {
-        params[key] = value
-      }
-    } else {
-      where[key] = value
-    }
-  }
-
-  // Cache and parse _where clause if provided
-  if (rawWhere !== null) {
-    let parsedWhere: Record<string, unknown>
-    if (whereClauseCache.has(rawWhere)) {
-      parsedWhere = whereClauseCache.get(rawWhere)!
-    } else {
-      try {
-        const parsed = JSON.parse(rawWhere)
-        if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-          parsedWhere = parsed as Record<string, unknown>
-          whereClauseCache.set(rawWhere, parsedWhere)
-        }
-      } catch {
-        // Invalid JSON, use empty where
-        parsedWhere = {}
-      }
-    }
-    Object.assign(where, parsedWhere)
-  }
-
-  return { where, params }
+  // Deprecated: Use parseWhere from parse-where.ts and app.ts parseListParams instead
+  console.warn('parseListParams in service.ts is deprecated, use app.ts version')
+  return { where: {}, params: {} }
 }
 
 function getSortFunction(sortKey: string): (items: unknown[]) => unknown[] {
