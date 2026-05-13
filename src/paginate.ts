@@ -24,7 +24,8 @@ export function paginate<T>(items: T[], page: number, perPage: number): Paginati
 
   const start = (currentPage - 1) * safePerPage
   
-  // Early exit: if start is beyond array, return empty data
+  // Early termination: return empty data immediately if pagination is beyond bounds
+  // This prevents unnecessary array operations on high page numbers
   if (start >= totalItems) {
     return {
       first,
@@ -37,8 +38,9 @@ export function paginate<T>(items: T[], page: number, perPage: number): Paginati
     }
   }
   
-  // Deferred slicing: only slice the needed portion, avoiding full array scan
-  const end = start + safePerPage
+  // Offset-based pagination: slice only the requested range to avoid materializing
+  // the entire dataset. This reduces memory footprint for large collections.
+  const end = Math.min(start + safePerPage, totalItems)
   const data = items.slice(start, end)
 
   return {
