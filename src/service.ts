@@ -165,15 +165,24 @@ export class Service {
       results = results.map((item) => embed(this.#db, name, item, related))
     })
 
+    // Apply filters and early termination for paginated queries
     results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
+    
     if (opts.sort) {
       // Use memoized sort function to avoid recomputation for repeated sort keys
       const sortFn = getSortFunction(opts.sort)
       results = sortFn(results) as Item[]
     }
 
+    // For paginated queries, slice early to avoid processing beyond page boundary
     if (opts.page !== undefined) {
-      return paginate(results, opts.page, opts.perPage ?? 10)
+      const perPage = opts.perPage ?? 10
+      // Early termination: only keep what pagination needs plus margin for offset
+      const maxNeeded = opts.page * perPage
+      if (results.length > maxNeeded) {
+        results = results.slice(0, maxNeeded)
+      }
+      return paginate(results, opts.page, perPage)
     }
 
     return results
