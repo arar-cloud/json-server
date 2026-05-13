@@ -13,6 +13,36 @@ const sortFunctionCache = new Map<string, (items: unknown[]) => unknown[]>()
 // Cache for parsed _where clauses to avoid re-parsing identical queries
 const whereClauseCache = new Map<string, Record<string, unknown>>()
 
+// LRU cache for query results to avoid redundant filter/sort/paginate operations
+class LRUCache<K, V> {
+  private cache: Map<K, V> = new Map()
+  private maxSize: number = 100
+
+  get(key: K): V | undefined {
+    if (this.cache.has(key)) {
+      const val = this.cache.get(key)!
+      // Move to end (most recently used)
+      this.cache.delete(key)
+      this.cache.set(key, val)
+      return val
+    }
+    return undefined
+  }
+
+  set(key: K, value: V): void {
+    if (this.cache.has(key)) {
+      this.cache.delete(key)
+    } else if (this.cache.size >= this.maxSize) {
+      // Evict least recently used (first item)
+      const firstKey = this.cache.keys().next().value
+      this.cache.delete(firstKey)
+    }
+    this.cache.set(key, value)
+  }
+}
+
+const queryResultCache = new LRUCache<string, Item[] | PaginatedItems>()
+
 export type Item = Record<string, unknown>
 
 export type Data = Record<string, Item[] | Item>
