@@ -10,9 +10,6 @@ import { randomId } from './random-id.ts'
 // Memoization cache for sort function factories to reduce recomputation
 const sortFunctionCache = new Map<string, (items: unknown[]) => unknown[]>()
 
-// Cache for parsed _where clauses to avoid re-parsing identical queries
-const whereClauseCache = new Map<string, Record<string, unknown>>()
-
 // LRU cache for query results to avoid redundant filter/sort/paginate operations
 class LRUCache<K, V> {
   private cache: Map<K, V> = new Map()
