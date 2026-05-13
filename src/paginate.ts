@@ -23,6 +23,21 @@ export function paginate<T>(items: T[], page: number, perPage: number): Paginati
   const last = pages
 
   const start = (currentPage - 1) * safePerPage
+  
+  // Early exit: if start is beyond array, return empty data
+  if (start >= totalItems) {
+    return {
+      first,
+      prev,
+      next,
+      last,
+      pages,
+      items: totalItems,
+      data: [],
+    }
+  }
+  
+  // Deferred slicing: only slice the needed portion, avoiding full array scan
   const end = start + safePerPage
   const data = items.slice(start, end)
 
