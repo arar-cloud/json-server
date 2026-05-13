@@ -24,7 +24,7 @@ class LRUCache<K, V> {
       // Move to end (most recently used)
       this.cache.delete(key)
       this.cache.set(key, val)
-      finalResults = val
+      return val
     }
     return undefined
   }
