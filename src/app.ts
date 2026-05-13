@@ -104,6 +104,9 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     ?.map((path) => (isAbsolute(path) ? path : join(process.cwd(), path)))
     .forEach((dir) => app.use(sirv(dir, { dev: !isProduction })))
 
+  // Body parser (before CORS to filter static routes first)
+  app.use(json())
+
   // CORS
   app
     .use((req, res, next) => {
@@ -114,9 +117,6 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
       })(req, res, next)
     })
     .options('*', cors())
-
-  // Body parser
-  app.use(json())
 
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
 
