@@ -45,6 +45,17 @@ function getCachedRegex(pattern: string, flags?: string): RegExp {
 }
 
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
+  // Pre-index _nin conditions for O(1) lookups on first pass
+  const ninIndexes = new Map<string, Set<unknown>>()
+  for (const [k, v] of Object.entries(where)) {
+    if (k !== 'or' && isJSONObject(v)) {
+      const knownOps = getKnownOperators(v)
+      if (knownOps.includes('nin') && Array.isArray((v as any).nin)) {
+        ninIndexes.set(k, new Set((v as any).nin))
+      }
+    }
+  }
+
   for (const [key, value] of Object.entries(where)) {
     if (key === 'or') {
       if (!Array.isArray(value) || value.length === 0) return false
@@ -82,7 +93,10 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
         }
         if (knownOps.includes('nin')) {
           const handler = OPERATOR_MAP.get('nin')
-          if (!handler || !handler(field, op.nin)) return false
+          // Early-exit: convert array to Set for O(1) membership testing
+          const ninSet = new Set(Array.isArray(op.nin) ? op.nin : [])
+          const result = Array.isArray(op.nin) ? !ninSet.has(field) : true
+          if (!result) return false
         }
         if (knownOps.includes('contains')) {
           if (typeof field !== 'string') return false
