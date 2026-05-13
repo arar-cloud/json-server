@@ -187,27 +187,23 @@ export class Service {
       results = results.map((item) => embed(this.#db, name, item, related))
     })
 
-    // Apply filters with lazy evaluation and early termination for paginated queries
-    // For paginated requests, only filter as many items as needed to avoid full dataset scans
-    const hasLimitOrPagination = opts.page !== undefined
-    const maxItemsNeeded = hasLimitOrPagination ? ((opts.page ?? 1) * (opts.perPage ?? 10)) : undefined
+    // OPTIMIZATION: Filter items FIRST with lazy evaluation (early termination)
+    // Avoids sorting/paginating full unfiltered dataset. For paginated queries,
+    // collect only needed items to minimize memory footprint and CPU overhead.
+    const filtered: Item[] = []
+    const pageSize = opts.perPage ?? 10
+    const maxItemsNeeded = opts.page !== undefined ? (opts.page * pageSize) : undefined
     
-    if (maxItemsNeeded !== undefined && maxItemsNeeded > 0) {
-      // Lazy filter: collect only as many matching items as needed
-      const filtered: Item[] = []
-      for (const item of results) {
-        if (matchesWhere(item as JsonObject, opts.where)) {
-          filtered.push(item)
-          // Collect slightly more than needed to account for sort changes
-          if (filtered.length >= maxItemsNeeded * 2) {
-            break
-          }
+    for (const item of results) {
+      if (matchesWhere(item as JsonObject, opts.where)) {
+        filtered.push(item)
+        // Early termination: stop after collecting enough items for requested page
+        if (maxItemsNeeded !== undefined && filtered.length >= maxItemsNeeded) {
+          break
         }
       }
-      results = filtered
-    } else {
-      results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
     }
+    results = filtered
 
     if (opts.sort) {
       // Use memoized sort function to avoid recomputation for repeated sort keys
