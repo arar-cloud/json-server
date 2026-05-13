@@ -35,6 +35,7 @@ import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
 // ReDoS protection: max input length to prevent regex catastrophic backtracking
 const MAX_WHERE_KEY_LENGTH = 500
+const MAX_QUERY_LENGTH = 2048
 
 // DoS protection: query complexity limits
 const MAX_QUERY_DEPTH = 10
@@ -98,6 +99,12 @@ function coerceValue(value: string): string | number | boolean | null {
 }
 
 export function parseWhere(query: string): JsonObject {
+  // Validate query length to prevent ReDoS attacks
+  if (query.length > MAX_QUERY_LENGTH) {
+    console.warn(`Query exceeds max length of ${MAX_QUERY_LENGTH}, rejecting`)
+    return {}
+  }
+
   // Check cache first to avoid re-parsing identical query strings
   const cachedResult = parseWhereCache.get(query)
   if (cachedResult !== undefined) {
