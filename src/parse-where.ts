@@ -1,6 +1,36 @@
 import { setProperty } from 'dot-prop'
 import type { JsonObject } from 'type-fest'
 
+// LRU cache for parsed WHERE clauses to eliminate redundant AST construction
+class ParseWhereCache {
+  private cache: Map<string, JsonObject> = new Map()
+  private maxSize: number = 256
+
+  get(key: string): JsonObject | undefined {
+    if (this.cache.has(key)) {
+      const val = this.cache.get(key)!
+      // Move to end (most recently used)
+      this.cache.delete(key)
+      this.cache.set(key, val)
+      return val
+    }
+    return undefined
+  }
+
+  set(key: string, value: JsonObject): void {
+    if (this.cache.has(key)) {
+      this.cache.delete(key)
+    } else if (this.cache.size >= this.maxSize) {
+      // Evict least recently used (first item)
+      const firstKey = this.cache.keys().next().value
+      this.cache.delete(firstKey)
+    }
+    this.cache.set(key, value)
+  }
+}
+
+const parseWhereCache = new ParseWhereCache()
+
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
 // ReDoS protection: max input length to prevent regex catastrophic backtracking
@@ -68,6 +98,12 @@ function coerceValue(value: string): string | number | boolean | null {
 }
 
 export function parseWhere(query: string): JsonObject {
+  // Check cache first to avoid re-parsing identical query strings
+  const cachedResult = parseWhereCache.get(query)
+  if (cachedResult !== undefined) {
+    return cachedResult
+  }
+
   const out: JsonObject = {}
   const params = new URLSearchParams(query)
 
@@ -91,5 +127,7 @@ export function parseWhere(query: string): JsonObject {
     setPathOp(out, path, op, rawValue)
   }
 
+  // Cache the parsed result for future identical queries
+  parseWhereCache.set(query, out)
   return out
 }
