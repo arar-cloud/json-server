@@ -21,6 +21,32 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   return ops
 }
 
+// Pre-compiled regex patterns and operator cache to avoid recomputation per request
+const OPERATOR_PATTERN = /^(eq|ne|lt|lte|gt|gte|like|in|nin|regex)$/
+const OPERATOR_MAP = new Map<string, (a: unknown, b: unknown) => boolean>([
+  ['eq', (a, b) => a === b],
+  ['ne', (a, b) => a !== b],
+  ['lt', (a, b) => a < b],
+  ['lte', (a, b) => a <= b],
+  ['gt', (a, b) => a > b],
+  ['gte', (a, b) => a >= b],
+])
+
+// Cache compiled regex patterns to avoid recompilation
+const regexCache = new Map<string, RegExp>()
+
+function getOperatorFunction(op: string): ((a: unknown, b: unknown) => boolean) | null {
+  return OPERATOR_MAP.get(op) || null
+}
+
+function getCachedRegex(pattern: string, flags?: string): RegExp {
+  const key = `${pattern}:${flags || ''}`
+  if (!regexCache.has(key)) {
+    regexCache.set(key, new RegExp(pattern, flags))
+  }
+  return regexCache.get(key)!
+}
+
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
   for (const [key, value] of Object.entries(where)) {
     if (key === 'or') {
