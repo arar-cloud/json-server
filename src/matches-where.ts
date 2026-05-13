@@ -31,6 +31,9 @@ const OPERATOR_MAP = new Map<string, (a: unknown, b: unknown) => boolean>([
   ['gte', (a, b) => (a as any) >= (b as any)],
   ['in', (a, b) => Array.isArray(b) ? b.some((v) => (a as any) === (v as any)) : false],
   ['nin', (a, b) => Array.isArray(b) ? !b.some((v) => (a as any) === (v as any)) : true],
+  ['contains', (a, b) => typeof a === 'string' ? a.toLowerCase().includes(String(b).toLowerCase()) : false],
+  ['startsWith', (a, b) => typeof a === 'string' ? a.toLowerCase().startsWith(String(b).toLowerCase()) : false],
+  ['endsWith', (a, b) => typeof a === 'string' ? a.toLowerCase().endsWith(String(b).toLowerCase()) : false],
 ])
 
 // Cache compiled regex patterns to avoid recompilation
@@ -99,16 +102,16 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
           if (!result) return false
         }
         if (knownOps.includes('contains')) {
-          if (typeof field !== 'string') return false
-          if (!field.toLowerCase().includes(String(op.contains).toLowerCase())) return false
+          const handler = OPERATOR_MAP.get('contains')
+          if (!handler || !handler(field, op.contains)) return false
         }
         if (knownOps.includes('startsWith')) {
-          if (typeof field !== 'string') return false
-          if (!field.toLowerCase().startsWith(String(op.startsWith).toLowerCase())) return false
+          const handler = OPERATOR_MAP.get('startsWith')
+          if (!handler || !handler(field, op.startsWith)) return false
         }
         if (knownOps.includes('endsWith')) {
-          if (typeof field !== 'string') return false
-          if (!field.toLowerCase().endsWith(String(op.endsWith).toLowerCase())) return false
+          const handler = OPERATOR_MAP.get('endsWith')
+          if (!handler || !handler(field, op.endsWith)) return false
         }
         continue
       }
