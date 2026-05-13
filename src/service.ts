@@ -169,7 +169,7 @@ export class Service {
     if (opts.sort) {
       // Use memoized sort function to avoid recomputation for repeated sort keys
       const sortFn = getSortFunction(opts.sort)
-      results = sortFn(results)
+      results = sortFn(results) as Item[]
     }
 
     if (opts.page !== undefined) {
