@@ -10,6 +10,9 @@ import { randomId } from './random-id.ts'
 // Memoization cache for sort function factories to reduce recomputation
 const sortFunctionCache = new Map<string, (items: unknown[]) => unknown[]>()
 
+// Cache for parsed _where clauses to avoid re-parsing identical queries
+const whereClauseCache = new Map<string, Record<string, unknown>>()
+
 export type Item = Record<string, unknown>
 
 export type Data = Record<string, Item[] | Item>
@@ -30,14 +33,39 @@ export function parseListParams(
   // Single-pass iteration instead of double-parsing to avoid redundant allocations
   const where: Record<string, unknown> = {}
   const params: Record<string, unknown> = {}
-  const reserved = new Set(['_sort', '_order', '_page', '_limit', '_embed'])
+  const reserved = new Set(['_sort', '_order', '_page', '_limit', '_embed', '_where'])
+  let rawWhere: string | null = null
 
   for (const [key, value] of query.entries()) {
     if (reserved.has(key)) {
-      params[key] = value
+      if (key === '_where') {
+        rawWhere = value
+      } else {
+        params[key] = value
+      }
     } else {
       where[key] = value
     }
+  }
+
+  // Cache and parse _where clause if provided
+  if (rawWhere !== null) {
+    let parsedWhere: Record<string, unknown>
+    if (whereClauseCache.has(rawWhere)) {
+      parsedWhere = whereClauseCache.get(rawWhere)!
+    } else {
+      try {
+        const parsed = JSON.parse(rawWhere)
+        if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+          parsedWhere = parsed as Record<string, unknown>
+          whereClauseCache.set(rawWhere, parsedWhere)
+        }
+      } catch {
+        // Invalid JSON, use empty where
+        parsedWhere = {}
+      }
+    }
+    Object.assign(where, parsedWhere)
   }
 
   return { where, params }
