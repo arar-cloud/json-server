@@ -6,6 +6,10 @@ import type { JsonObject } from 'type-fest'
 import { matchesWhere } from './matches-where.ts'
 import { paginate, type PaginationResult } from './paginate.ts'
 import { randomId } from './random-id.ts'
+
+// Memoization cache for sort function factories to reduce recomputation
+const sortFunctionCache = new Map<string, (items: unknown[]) => unknown[]>()
+
 export type Item = Record<string, unknown>
 
 export type Data = Record<string, Item[] | Item>
@@ -18,6 +22,18 @@ export type PaginatedItems = PaginationResult<Item>
 
 function ensureArray(arg: string | string[] = []): string[] {
   return Array.isArray(arg) ? arg : [arg]
+}
+
+function getSortFunction(sortKey: string): (items: unknown[]) => unknown[] {
+  // Check cache first to avoid recomputation for identical sort keys
+  if (sortFunctionCache.has(sortKey)) {
+    return sortFunctionCache.get(sortKey)!
+  }
+  
+  // Create sort function and cache it for future requests
+  const sortFn = (items: unknown[]) => sortOn(items, sortKey.split(','))
+  sortFunctionCache.set(sortKey, sortFn)
+  return sortFn
 }
 
 function embed(db: Low<Data>, name: string, item: Item, related: string): Item {
@@ -132,7 +148,9 @@ export class Service {
 
     results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
     if (opts.sort) {
-      results = sortOn(results, opts.sort.split(','))
+      // Use memoized sort function to avoid recomputation for repeated sort keys
+      const sortFn = getSortFunction(opts.sort)
+      results = sortFn(results)
     }
 
     if (opts.page !== undefined) {
