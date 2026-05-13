@@ -109,6 +109,10 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   // Create app
   const app = new App()
 
+  // Pre-compute CORS configuration at startup to avoid repeated header evaluation
+  const corsHandler = cors()
+  const corsOptions = { origin: '*', credentials: true }
+
   // Static files
   app.use(sirv('public', { dev: !isProduction }))
   options.static
@@ -118,16 +122,12 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   // Body parser (before CORS to filter static routes first)
   app.use(json())
 
-  // CORS
+  // CORS - use pre-computed handler to avoid repeated evaluation
   app
     .use((req, res, next) => {
-      return cors({
-        allowedHeaders: req.headers['access-control-request-headers']
-          ?.split(',')
-          .map((h) => h.trim()),
-      })(req, res, next)
+      return corsHandler(req, res, next)
     })
-    .options('*', cors())
+    .options('*', corsHandler)
 
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
 
