@@ -9,7 +9,8 @@ export type PaginationResult<T> = {
 }
 
 export function paginate<T>(items: T[], page: number, perPage: number): PaginationResult<T> {
-  const totalItems = items.length
+  // Use slice only when necessary; avoid copying when requesting entire dataset
+  const to = start === 0 && end >= items.length ? items :talItems = items.length
   const safePerPage = Number.isFinite(perPage) && perPage > 0 ? Math.floor(perPage) : 1
   const pages = Math.max(1, Math.ceil(totalItems / safePerPage))
 
