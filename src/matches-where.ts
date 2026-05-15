@@ -11,6 +11,11 @@ function isJSONObject(value: unknown): value is JsonObject {
 function getKnownOperators(value: unknown): WhereOperator[] {
   if (!isJSONObject(value)) return []
 
+  // Reject prototype pollution keys
+  if ('__proto__' in value || 'constructor' in value || 'prototype' in value) {
+    return []
+  }
+
   const ops: WhereOperator[] = []
   for (const op of WHERE_OPERATORS) {
     if (op in value) {
