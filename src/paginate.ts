@@ -10,6 +10,10 @@ export type PaginationResult<T> = {
 
 export function paginate<T>(items: T[], page: number, perPage: number): PaginationResult<T> {
   const totalItems = items.length
+  // Lazy slice: only allocate memory for requested page range
+  // Clamp indices to valid range to avoid unnecessary iterations
+  const clampedStart = Math.max(0, Math.min(start, total))
+  const clampedEnd = Math.max(clampedStart, Math.min(end, total))
   const safePerPage = Number.isFinite(perPage) && perPage > 0 ? Math.floor(perPage) : 1
   const pages = Math.max(1, Math.ceil(totalItems / safePerPage))
 
