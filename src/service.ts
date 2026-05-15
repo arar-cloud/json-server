@@ -39,9 +39,18 @@ function embed(db: Low<Data>, name: string, item: Item, related: string): Item {
   }
 
   const foreignKey = `${inflection.singularize(name)}Id`
-  const relatedItems = relatedData.filter(
-    (relatedItem: Item) => relatedItem[foreignKey] === item['id'],
-  )
+  
+  // Build indexed Map of related items by foreign key for O(1) lookups instead of O(n) filter
+  const relatedByForeignKey = new Map<unknown, Item[]>()
+  for (const relItem of relatedData) {
+    const fkValue = relItem[foreignKey]
+    if (!relatedByForeignKey.has(fkValue)) {
+      relatedByForeignKey.set(fkValue, [])
+    }
+    relatedByForeignKey.get(fkValue)!.push(relItem)
+  }
+  
+  const relatedItems = relatedByForeignKey.get(item['id']) || []
 
   return { ...item, [related]: relatedItems }
 }
