@@ -1,3 +1,25 @@
+// Maximum nesting depth to prevent DoS via deeply nested filter structures
+const MAX_NESTING_DEPTH = 10
+// Operators allowed in filter expressions (whitelist)
+const ALLOWED_OPERATORS = new Set(['lt', 'lte', 'gt', 'gte', 'eq', 'ne', 'in', 'contains', 'startsWith', 'endsWith'])
+
+function isValidKeyPath(keys: string[]): boolean {
+  // Check nesting depth
+  if (keys.length > MAX_NESTING_DEPTH) return false
+
+  // Reject prototype pollution attempts and empty keys
+  for (const key of keys) {
+    if (!key || key === '__proto__' || key === 'constructor' || key === 'prototype') {
+      return false
+    }
+    // Only allow alphanumeric, underscore, and hyphen in keys
+    if (!/^[a-zA-Z0-9_-]+$/.test(key)) {
+      return false
+    }
+  }
+  return true
+}
+
 import { setProperty } from 'dot-prop'
 import type { JsonObject } from 'type-fest'
 
