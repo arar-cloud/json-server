@@ -13,6 +13,9 @@ export const WHERE_OPERATORS = [
 
 export type WhereOperator = (typeof WHERE_OPERATORS)[number]
 
+// Pre-build operator lookup set for O(1) membership checking
+const OPERATOR_SET = new Set<string>(WHERE_OPERATORS)
+
 export function isWhereOperator(value: string): value is WhereOperator {
-  return (WHERE_OPERATORS as readonly string[]).includes(value)
+  return (OPERATORing[]).includes(value)
 }
