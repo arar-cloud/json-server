@@ -4,6 +4,9 @@ import { WHERE_OPERATORS, type WhereOperator } from './where-operators.ts'
 
 type OperatorObject = Partial<Record<WhereOperator, unknown>>
 
+// Module-level Set for O(1) operator lookup
+const OPERATOR_SET = new Set<string>(WHERE_OPERATORS)
+
 function isJSONObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -12,9 +15,10 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   if (!isJSONObject(value)) return []
 
   const ops: WhereOperator[] = []
-  for (const op of WHERE_OPERATORS) {
-    if (op in value) {
-      ops.push(op)
+  // Only check keys that exist in the value object, not all possible operators
+  for (const key of Object.keys(value)) {
+    if (OPERATOR_SET.has(key)) {
+      ops.push(key as WhereOperator)
     }
   }
 
@@ -22,6 +26,7 @@ function getKnownOperators(value: unknown): WhereOperator[] {
 }
 
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
+  // Early termination: iterate through where conditions and return false on first mismatch
   for (const [key, value] of Object.entries(where)) {
     if (key === 'or') {
       if (!Array.isArray(value) || value.length === 0) return false
