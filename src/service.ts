@@ -130,8 +130,15 @@ export class Service {
       results = results.map((item) => embed(this.#db, name, item, related))
     })
 
+    // Apply sort before filter if no where clause to reduce sort complexity
+    if (opts.sort && Object.keys(opts.where).length === 0) {
+      results = sortOn(results, opts.sort.split(','))
+    }
+
     results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
-    if (opts.sort) {
+    
+    // Apply sort after filter if we have both filter and sort (sort only relevant items)
+    if (opts.sort && Object.keys(opts.where).length > 0) {
       results = sortOn(results, opts.sort.split(','))
     }
 
