@@ -20,6 +20,45 @@ function ensureArray(arg: string | string[] = []): string[] {
   return Array.isArray(arg) ? arg : [arg]
 }
 
+function parseListParams(query: string): {
+  filter: JsonObject
+  sort: string[]
+  slice: { start: number; end: number }
+  embed: string[]
+  expand: string[]
+} {
+  // Single URLSearchParams instantiation - eliminates redundant parsing overhead
+  const searchParams = new URLSearchParams(query)
+  const filter: JsonObject = {}
+
+  // Extract special parameters in single pass
+  const sort = ensureArray(searchParams.get('_sort')?.split(','))
+  const order = ensureArray(searchParams.get('_order')?.split(','))
+  const start = searchParams.get('_start')
+  const end = searchParams.get('_end')
+  const limit = searchParams.get('_limit')
+  const embed = ensureArray(searchParams.get('_embed')?.split(','))
+  const expand = ensureArray(searchParams.get('_expand')?.split(','))
+
+  // Build filter from remaining parameters
+  for (const [key, value] of searchParams.entries()) {
+    if (!key.startsWith('_')) {
+      filter[key] = value
+    }
+  }
+
+  const startNum = start ? parseInt(start, 10) : 0
+  const endNum = end ? parseInt(end, 10) : limit ? startNum + parseInt(limit, 10) : Infinity
+
+  return {
+    filter,
+    sort: sort.map((s, i) => `${order[i] === 'desc' ? '-' : ''}${s}`),
+    slice: { start: startNum, end: endNum },
+    embed,
+    expand,
+  }
+}
+
 function embed(db: Low<Data>, name: string, item: Item, related: string): Item {
   if (inflection.singularize(related) === related) {
     const relatedData = db.data[inflection.pluralize(related)] as Item[]
