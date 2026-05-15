@@ -10,12 +10,19 @@ export type RawData = Record<string, Item[] | Item | string | undefined> & {
 
 export class NormalizedAdapter implements Adapter<Data> {
   #adapter: Adapter<RawData>
+  #normalizedCache: Data | null = null
+  #cacheInvalidated = true
 
   constructor(adapter: Adapter<RawData>) {
     this.#adapter = adapter
   }
 
   async read(): Promise<Data | null> {
+    // Return cached result if cache is valid
+    if (!this.#cacheInvalidated && this.#normalizedCache !== null) {
+      return this.#normalizedCache
+    }
+
     const data = await this.#adapter.read()
 
     if (data === null) {
@@ -38,10 +45,15 @@ export class NormalizedAdapter implements Adapter<Data> {
       }
     }
 
-    return data as Data
+    // Cache the normalized result
+    this.#normalizedCache = data as Data
+    this.#cacheInvalidated = false
+    return this.#normalizedCache
   }
 
   async write(data: Data): Promise<void> {
+    // Invalidate cache on write to ensure fresh normalization on next read
+    this.#cacheInvalidated = true
     await this.#adapter.write({ ...data, $schema: DEFAULT_SCHEMA_PATH })
   }
 }
