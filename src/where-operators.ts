@@ -17,5 +17,5 @@ export type WhereOperator = (typeof WHERE_OPERATORS)[number]
 const OPERATOR_SET = new Set<string>(WHERE_OPERATORS)
 
 export function isWhereOperator(value: string): value is WhereOperator {
-  return (OPERATORing[]).includes(value)
+  return OPERATOR_SET.has(value)
 }
