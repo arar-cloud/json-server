@@ -136,8 +136,9 @@ if (extname(file) === ".json5") {
 }
 const observer = new Observer(new NormalizedAdapter(adapter));
 
+// Use async file I/O to prevent blocking event loop during startup
 const db = new Low<Data>(observer, {});
-await db.read();
+await db.read(); // Async read ensures non-blocking database initialization
 
 // Create app
 const app = createApp(db, { logger: false, static: staticArr });
