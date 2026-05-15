@@ -116,7 +116,18 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     })
     .options('*', cors())
 
-  // Body parser
+  // Body parser with size limits to prevent DoS
+  const MAX_JSON_SIZE = process.env['MAX_JSON_SIZE'] ? parseInt(process.env['MAX_JSON_SIZE'], 10) : 1048576 // 1MB default
+  app.use((req, res, next) => {
+    let size = 0
+    req.on('data', (chunk) => {
+      size += chunk.length
+      if (size > MAX_JSON_SIZE) {
+        res.status(413).json({ error: 'Payload too large' })
+      }
+    })
+    next?.()
+  })
   app.use(json())
 
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
