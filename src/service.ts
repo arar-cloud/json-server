@@ -160,7 +160,7 @@ export class Service {
     const item = { ...data, id: randomId() }
     items.push(item)
 
-    await this.#db.write()
+    await withTimeout(this.#db.write(), QUERY_TIMEOUT_MS)
     return item
   }
 
@@ -170,7 +170,7 @@ export class Service {
 
     const nextItem = (this.#db.data[name] = isPatch ? { ...item, ...body } : body)
 
-    await this.#db.write()
+    await withTimeout(this.#db.write(), QUERY_TIMEOUT_MS)
     return nextItem
   }
 
@@ -190,7 +190,7 @@ export class Service {
     const index = items.indexOf(item)
     items.splice(index, 1, nextItem)
 
-    await this.#db.write()
+    await withTimeout(this.#db.write(), QUERY_TIMEOUT_MS)
     return nextItem
   }
 
