@@ -72,8 +72,13 @@ function withBody(action: (name: string, body: Record<string, unknown>) => Promi
       res.status(400).json({ error: 'Body must be a JSON object' })
       return
     }
-    res.locals['data'] = await action(name, req.body)
-    next?.()
+    try {
+      res.locals['data'] = await action(name, req.body)
+      next?.()
+    } catch (err) {
+      console.error('Error in withBody:', err instanceof Error ? err.message : 'unknown error')
+      res.status(500).json({ error: 'Internal server error' })
+    }
   }
 }
 
@@ -86,8 +91,13 @@ function withIdAndBody(
       res.status(400).json({ error: 'Body must be a JSON object' })
       return
     }
-    res.locals['data'] = await action(name, id, req.body)
-    next?.()
+    try {
+      res.locals['data'] = await action(name, id, req.body)
+      next?.()
+    } catch (err) {
+      console.error('Error in withIdAndBody:', err instanceof Error ? err.message : 'unknown error')
+      res.status(500).json({ error: 'Internal server error' })
+    }
   }
 }
 
