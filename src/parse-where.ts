@@ -3,6 +3,9 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
+const MAX_WHERE_PAYLOAD_SIZE = 16384 // 16KB
+const MAX_EXPRESSION_DEPTH = 10
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
@@ -55,7 +58,26 @@ function coerceValue(value: string): string | number | boolean | null {
   return value
 }
 
+function validateExpressionDepth(obj: unknown, depth = 0): boolean {
+  if (depth > MAX_EXPRESSION_DEPTH) {
+    return false
+  }
+  if (typeof obj !== 'object' || obj === null) {
+    return true
+  }
+  if (Array.isArray(obj)) {
+    return obj.every(item => validateExpressionDepth(item, depth + 1))
+  }
+  return Object.values(obj).every(val => validateExpressionDepth(val, depth + 1))
+}
+
 export function parseWhere(query: string): JsonObject {
+  // Check payload size before processing
+  if (query.length > MAX_WHERE_PAYLOAD_SIZE) {
+    console.warn('Where clause exceeds maximum payload size')
+    return {}
+  }
+
   const out: JsonObject = {}
   const params = new URLSearchParams(query)
 
@@ -63,6 +85,12 @@ export function parseWhere(query: string): JsonObject {
     const { path, op } = splitKey(rawKey)
     if (op === null) continue
     setPathOp(out, path, op, rawValue)
+  }
+
+  // Validate expression depth to prevent stack overflow
+  if (!validateExpressionDepth(out)) {
+    console.warn('Where clause expression exceeds maximum depth')
+    return {}
   }
 
   return out
