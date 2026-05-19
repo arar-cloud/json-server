@@ -4,6 +4,8 @@ import { WHERE_OPERATORS, type WhereOperator } from './where-operators.ts'
 
 type OperatorObject = Partial<Record<WhereOperator, unknown>>
 
+const MAX_FILTER_RECURSION_DEPTH = 15
+
 function isJSONObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -21,7 +23,13 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   return ops
 }
 
-export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
+export function matchesWhere(obj: JsonObject, where: JsonObject, depth = 0): boolean {
+  // Prevent stack overflow from deeply nested filter expressions
+  if (depth > MAX_FILTER_RECURSION_DEPTH) {
+    console.warn('Filter expression exceeds maximum recursion depth')
+    return false
+  }
+  
   for (const [key, value] of Object.entries(where)) {
     if (key === 'or') {
       if (!Array.isArray(value) || value.length === 0) return false
