@@ -6,6 +6,17 @@ import type { JsonObject } from 'type-fest'
 import { matchesWhere } from './matches-where.ts'
 import { paginate, type PaginationResult } from './paginate.ts'
 import { randomId } from './random-id.ts'
+
+const QUERY_TIMEOUT_MS = 30000 // 30 second timeout
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => 
+      setTimeout(() => reject(new Error(`Operation timeout after ${timeoutMs}ms`)), timeoutMs)
+    )
+  ])
+}
 export type Item = Record<string, unknown>
 
 export type Data = Record<string, Item[] | Item>
