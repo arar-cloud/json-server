@@ -36,7 +36,7 @@ export function matchesWhere(obj: JsonObject, where: JsonObject, depth = 0): boo
 
       let matched = false
       for (const subWhere of value) {
-        if (isJSONObject(subWhere) && matchesWhere(obj, subWhere)) {
+        if (isJSONObject(subWhere) && matchesWhere(obj, subWhere, depth + 1)) {
           matched = true
           break
         }
@@ -81,7 +81,7 @@ export function matchesWhere(obj: JsonObject, where: JsonObject, depth = 0): boo
       }
 
       if (isJSONObject(field)) {
-        if (!matchesWhere(field, value)) return false
+        if (!matchesWhere(field, value, depth + 1)) return false
       }
 
       continue
