@@ -8,7 +8,27 @@ export type PaginationResult<T> = {
   data: T[]
 }
 
+const MIN_PAGE = 1
+const MAX_PAGE = 999999
+const MIN_PER_PAGE = 1
+const MAX_PER_PAGE = 10000
+
+export function validatePaginationParams(page: number, perPage: number): { page: number; perPage: number } {
+  // Validate page bounds
+  if (!Number.isInteger(page) || page < MIN_PAGE || page > MAX_PAGE) {
+    page = MIN_PAGE
+  }
+
+  // Validate perPage bounds
+  if (!Number.isInteger(perPage) || perPage < MIN_PER_PAGE || perPage > MAX_PER_PAGE) {
+    perPage = 10 // Default reasonable value
+  }
+
+  return { page, perPage }
+}
+
 export function paginate<T>(items: T[], page: number, perPage: number): PaginationResult<T> {
+  const { page: validPage, perPage: validPerPage } = validatePaginationParams(page, perPage)
   const totalItems = items.length
   const safePerPage = Number.isFinite(perPage) && perPage > 0 ? Math.floor(perPage) : 1
   const pages = Math.max(1, Math.ceil(totalItems / safePerPage))
