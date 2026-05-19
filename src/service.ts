@@ -116,9 +116,11 @@ function deleteDependents(db: Low<Data>, name: string, dependents: string[]) {
 
 export class Service {
   #db: Low<Data>
+  #txLock: TransactionLock
 
   constructor(db: Low<Data>) {
     this.#db = db
+    this.#txLock = new TransactionLock()
   }
 
   #get(name: string): Item[] | Item | undefined {
@@ -179,14 +181,16 @@ export class Service {
   }
 
   async create(name: string, data: Omit<Item, 'id'> = {}): Promise<Item | undefined> {
-    const items = this.#get(name)
-    if (items === undefined || !Array.isArray(items)) return
+    return this.#txLock.acquire(`create_${name}`, async () => {
+      const items = this.#get(name)
+      if (items === undefined || !Array.isArray(items)) return
 
-    const item = { ...data, id: randomId() }
-    items.push(item)
+      const item = { ...data, id: randomId() }
+      items.push(item)
 
-    await withTimeout(this.#db.write(), QUERY_TIMEOUT_MS)
-    return item
+      await withTimeout(this.#db.write(), QUERY_TIMEOUT_MS)
+      return item
+    })
   }
 
   async #updateOrPatch(name: string, body: Item = {}, isPatch: boolean): Promise<Item | undefined> {
@@ -205,18 +209,20 @@ export class Service {
     body: Item = {},
     isPatch: boolean,
   ): Promise<Item | undefined> {
-    const items = this.#get(name)
-    if (items === undefined || !Array.isArray(items)) return
+    return this.#txLock.acquire(`${isPatch ? 'patch' : 'update'}_${name}_${id}`, async () => {
+      const items = this.#get(name)
+      if (items === undefined || !Array.isArray(items)) return
 
-    const item = items.find((item) => item['id'] === id)
-    if (!item) return
+      const item = items.find((item) => item['id'] === id)
+      if (!item) return
 
-    const nextItem = isPatch ? { ...item, ...body, id } : { ...body, id }
-    const index = items.indexOf(item)
-    items.splice(index, 1, nextItem)
+      const nextItem = isPatch ? { ...item, ...body, id } : { ...body, id }
+      const index = items.indexOf(item)
+      items.splice(index, 1, nextItem)
 
-    await withTimeout(this.#db.write(), QUERY_TIMEOUT_MS)
-    return nextItem
+      await withTimeout(this.#db.write(), QUERY_TIMEOUT_MS)
+      return nextItem
+    })
   }
 
   async update(name: string, body: Item = {}): Promise<Item | undefined> {
