@@ -22,11 +22,22 @@ export class NormalizedAdapter implements Adapter<Data> {
       return null
     }
 
+    if (typeof data !== 'object' || Array.isArray(data)) {
+      console.warn('Database data is not a valid object structure')
+      return null
+    }
+
     delete data['$schema']
 
     for (const value of Object.values(data)) {
       if (Array.isArray(value)) {
         for (const item of value) {
+          if (item === null || item === undefined) {
+            continue
+          }
+          if (typeof item !== 'object') {
+            continue
+          }
           if (typeof item['id'] === 'number') {
             item['id'] = item['id'].toString()
           }
