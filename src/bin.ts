@@ -162,7 +162,7 @@ function randomItem(items: string[]): string {
   return items.at(index) ?? "";
 }
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(
     [
       chalk.bold(`JSON Server started on PORT :${port}`),
@@ -222,3 +222,31 @@ if (process.env["NODE_ENV"] !== "production") {
     }
   });
 }
+
+// Graceful shutdown handlers
+const gracefulShutdown = async (signal: string) => {
+  console.log(`\nReceived ${signal}, closing gracefully...`);
+  
+  server.close(async () => {
+    try {
+      // Close database connection
+      if (db && typeof db.write === "function") {
+        await db.write();
+      }
+      console.log("Database closed successfully");
+      process.exit(0);
+    } catch (err) {
+      console.error("Error during shutdown:", err instanceof Error ? err.message : "unknown error");
+      process.exit(1);
+    }
+  });
+  
+  // Force exit after timeout
+  setTimeout(() => {
+    console.error("Forced shutdown after timeout");
+    process.exit(1);
+  }, 10000);
+};
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
