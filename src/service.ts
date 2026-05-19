@@ -17,6 +17,31 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
     )
   ])
 }
+
+class TransactionLock {
+  private locks = new Map<string, Promise<void>>()
+  
+  async acquire<T>(key: string, fn: () => Promise<T>): Promise<T> {
+    // Wait for existing lock on this key
+    if (this.locks.has(key)) {
+      await this.locks.get(key)
+    }
+    
+    let releaseLock: () => void = () => {}
+    const lockPromise = new Promise<void>(resolve => {
+      releaseLock = resolve
+    })
+    
+    this.locks.set(key, lockPromise)
+    
+    try {
+      return await fn()
+    } finally {
+      this.locks.delete(key)
+      releaseLock()
+    }
+  }
+}
 export type Item = Record<string, unknown>
 
 export type Data = Record<string, Item[] | Item>
