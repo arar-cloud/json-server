@@ -226,11 +226,15 @@ export class Service {
   }
 
   async update(name: string, body: Item = {}): Promise<Item | undefined> {
-    return this.#updateOrPatch(name, body, false)
+    return this.#txLock.acquire(`update_${name}`, async () => {
+      return this.#updateOrPatch(name, body, false)
+    })
   }
 
   async patch(name: string, body: Item = {}): Promise<Item | undefined> {
-    return this.#updateOrPatch(name, body, true)
+    return this.#txLock.acquire(`patch_${name}`, async () => {
+      return this.#updateOrPatch(name, body, true)
+    })
   }
 
   async updateById(name: string, id: string, body: Item = {}): Promise<Item | undefined> {
@@ -246,19 +250,21 @@ export class Service {
     id: string,
     dependent?: string | string[],
   ): Promise<Item | undefined> {
-    const items = this.#get(name)
-    if (items === undefined || !Array.isArray(items)) return
+    return this.#txLock.acquire(`destroy_${name}_${id}`, async () => {
+      const items = this.#get(name)
+      if (items === undefined || !Array.isArray(items)) return
 
-    const item = items.find((item) => item['id'] === id)
-    if (item === undefined) return
-    const index = items.indexOf(item)
-    items.splice(index, 1)
+      const item = items.find((item) => item['id'] === id)
+      if (item === undefined) return
+      const index = items.indexOf(item)
+      items.splice(index, 1)
 
-    nullifyForeignKey(this.#db, name, id)
-    const dependents = ensureArray(dependent)
-    deleteDependents(this.#db, name, dependents)
+      nullifyForeignKey(this.#db, name, id)
+      const dependents = ensureArray(dependent)
+      deleteDependents(this.#db, name, dependents)
 
-    await this.#db.write()
-    return item
+      await this.#db.write()
+      return item
+    })
   }
 }
