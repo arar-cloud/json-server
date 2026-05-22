@@ -26,6 +26,7 @@ const eta = new Eta({
 })
 
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
+const parseWhereCache = new Map<string, ReturnType<typeof parseWhere>>()
 
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
@@ -38,7 +39,7 @@ function parseListParams(req: any) {
     }
   }
 
-  let where = parseWhere(filterParams.toString())
+  let where = parseWhereMemoized(filterParams.toString())
   const rawWhere = params.get('_where')
   if (typeof rawWhere === 'string') {
     try {
@@ -63,6 +64,15 @@ function parseListParams(req: any) {
     perPage: Number.isNaN(perPage) ? undefined : perPage,
     embed: req.query['_embed'],
   }
+}
+
+function parseWhereMemoized(queryString: string): ReturnType<typeof parseWhere> {
+  if (parseWhereCache.has(queryString)) {
+    return parseWhereCache.get(queryString)!
+  }
+  const result = parseWhere(queryString)
+  parseWhereCache.set(queryString, result)
+  return result
 }
 
 function withBody(action: (name: string, body: Record<string, unknown>) => Promise<unknown>) {
