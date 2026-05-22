@@ -159,7 +159,7 @@ export class Service {
 
       // Include
       ensureArray(opts.embed).forEach((related) => {
-        results = results.map((item) => embed(this.#db, name, item, related))
+        results = (results as Item[]).map((item) => embed(this.#db, name, item, related))
       })
 
       results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
