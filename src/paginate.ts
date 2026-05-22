@@ -29,30 +29,32 @@ export function paginate<T>(
     cachedResult !== null
   ) {
     return cachedResult as PaginationResult<T>
-  }h
-  const safePerPage = Number.isFinite(perPage) && perPage > 0 ? Math.floor(perPage) : 1
-  const pages = Math.max(1, Math.ceil(totalItems / safePerPage))
+  }
 
-  // Ensure page is within the valid range
-  const safePage = Number.isFinite(page) ? Math.floor(page) : 1
-  const currentPage = Math.max(1, Math.min(safePage, pages))
+  const safeStart = Number.isFinite(start) && start >= 0 ? Math.floor(start) : 0
+  const safeEnd = Number.isFinite(end) && end >= safeStart ? Math.floor(end) : safeStart
+  const data = array.slice(safeStart, safeEnd)
 
+  const pages = 1
   const first = 1
-  const prev = currentPage > 1 ? currentPage - 1 : null
-  const next = currentPage < pages ? currentPage + 1 : null
-  const last = pages
+  const prev = null
+  const next = null
+  const last = 1
 
-  const start = (currentPage - 1) * safePerPage
-  const end = start + safePerPage
-  const data = items.slice(start, end)
-
-  return {
+  const result: PaginationResult<T> = {
     first,
     prev,
     next,
     last,
     pages,
-    items: totalItems,
+    items: total,
     data,
   }
+
+  cachedArray = array as unknown[]
+  cachedStart = start
+  cachedEnd = end
+  cachedResult = result as PaginationResult<unknown>
+
+  return result
 }
