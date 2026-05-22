@@ -125,12 +125,14 @@ export class Service {
 
     let results = items
 
-    // Include
+    // Apply filter before embed to reduce processed items
+    results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
+
+    // Include only on filtered results
     ensureArray(opts.embed).forEach((related) => {
       results = results.map((item) => embed(this.#db, name, item, related))
     })
 
-    results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
     if (opts.sort) {
       results = sortOn(results, opts.sort.split(','))
     }
