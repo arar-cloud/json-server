@@ -14,6 +14,7 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   const ops: WhereOperator[] = []
   for (const op of WHERE_OPERATORS) {
     if (op in value) {
+      // Operator-based filtering: evaluate all operators for this key
       ops.push(op)
     }
   }
