@@ -80,9 +80,36 @@ function deleteDependents(db: Low<Data>, name: string, dependents: string[]) {
 
 export class Service {
   #db: Low<Data>
+  #queryCache: Map<string, { timestamp: number; result: Item[] }> = new Map()
+  #cacheMaxAge = 5000 // Cache invalidates after 5 seconds
+  #lastModifiedTime = 0 // Track last data mutation time
 
   constructor(db: Low<Data>) {
     this.#db = db
+    // Listen for data mutations to invalidate cache
+    const originalWrite = this.#db.write.bind(this.#db)
+    this.#db.write = async () => {
+      this.#lastModifiedTime = Date.now()
+      this.#queryCache.clear()
+      return originalWrite()
+    }
+  }
+
+  #getCacheKey(name: string, where: JsonObject, sort?: string): string {
+    return `${name}:${JSON.stringify(where)}:${sort || ''}`
+  }
+
+  #getCachedResult(cacheKey: string): Item[] | null {
+    const cached = this.#queryCache.get(cacheKey)
+    if (cached && Date.now() - cached.timestamp < this.#cacheMaxAge) {
+      return cached.result
+    }
+    this.#queryCache.delete(cacheKey)
+    return null
+  }
+
+  #setCachedResult(cacheKey: string, result: Item[]): void {
+    this.#queryCache.set(cacheKey, { timestamp: Date.now(), result })
   }
 
   #get(name: string): Item[] | Item | undefined {
@@ -123,16 +150,25 @@ export class Service {
       return items
     }
 
-    let results = items
+    const cacheKey = this.#getCacheKey(name, opts.where, opts.sort)
+    let results = this.#getCachedResult(cacheKey)
 
-    // Include
-    ensureArray(opts.embed).forEach((related) => {
-      results = results.map((item) => embed(this.#db, name, item, related))
-    })
+    if (results === null) {
+      // Cache miss: perform full collection scan and filtering
+      results = items
 
-    results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
-    if (opts.sort) {
-      results = sortOn(results, opts.sort.split(','))
+      // Include
+      ensureArray(opts.embed).forEach((related) => {
+        results = results.map((item) => embed(this.#db, name, item, related))
+      })
+
+      results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
+      if (opts.sort) {
+        results = sortOn(results, opts.sort.split(','))
+      }
+      
+      // Cache the filtered+sorted result
+      this.#setCachedResult(cacheKey, results)
     }
 
     if (opts.page !== undefined) {
