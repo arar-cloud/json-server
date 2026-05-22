@@ -4,6 +4,9 @@ import { WHERE_OPERATORS, type WhereOperator } from './where-operators.ts'
 
 type OperatorObject = Partial<Record<WhereOperator, unknown>>
 
+// Pre-computed set of operators for faster O(1) lookups
+const OPERATORS_SET = new Set(WHERE_OPERATORS)
+
 function isJSONObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -12,9 +15,10 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   if (!isJSONObject(value)) return []
 
   const ops: WhereOperator[] = []
-  for (const op of WHERE_OPERATORS) {
-    if (op in value) {
-      ops.push(op)
+  // Iterate through object keys and check if they are known operators (faster than iterating WHERE_OPERATORS)
+  for (const key in value) {
+    if (OPERATORS_SET.has(key as WhereOperator)) {
+      ops.push(key as WhereOperator)
     }
   }
 
