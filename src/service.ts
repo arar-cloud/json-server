@@ -6,6 +6,7 @@ import type { JsonObject } from 'type-fest'
 import { matchesWhere } from './matches-where.ts'
 import { paginate, type PaginationResult } from './paginate.ts'
 import { randomId } from './random-id.ts'
+import { queryCache } from './query-cache.ts'
 export type Item = Record<string, unknown>
 
 export type Data = Record<string, Item[] | Item>
@@ -123,22 +124,44 @@ export class Service {
       return items
     }
 
-    let results = items
-
-    // Apply filter before embed to reduce processed items
-    results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
+    // Check cache for identical query (where + sort + page + perPage)
+    const whereKey = JSON.stringify(opts.where)
+    const cached = queryCache.get(whereKey, opts.sort, opts.page, opts.perPage)
+    
+    let results: Item[]
+    if (cached) {
+      // Return cached result if pagination info is present
+      if (opts.page !== undefined && typeof cached === 'object' && 'data' in cached) {
+        results = cached.data
+      } else if (Array.isArray(cached)) {
+        results = cached
+      } else {
+        results = items.filter((item) => matchesWhere(item as JsonObject, opts.where))
+      }
+    } else {
+      // Apply filter before embed to reduce processed items
+      results = items.filter((item) => matchesWhere(item as JsonObject, opts.where))
+    }
 
     // Include only on filtered results
     ensureArray(opts.embed).forEach((related) => {
       results = results.map((item) => embed(this.#db, name, item, related))
     })
 
-    if (opts.sort) {
+    if (opts.sort && !cached) {
       results = sortOn(results, opts.sort.split(','))
     }
 
     if (opts.page !== undefined) {
-      return paginate(results, opts.page, opts.perPage ?? 10)
+      const paginatedResult = paginate(results, opts.page, opts.perPage ?? 10)
+      // Cache paginated result
+      queryCache.set(whereKey, opts.sort, opts.page, opts.perPage ?? 10, paginatedResult as any)
+      return paginatedResult
+    }
+
+    // Cache non-paginated result
+    if (!cached) {
+      queryCache.set(whereKey, opts.sort, undefined, undefined, results)
     }
 
     return results
