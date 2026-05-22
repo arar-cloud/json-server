@@ -8,8 +8,28 @@ export type PaginationResult<T> = {
   data: T[]
 }
 
-export function paginate<T>(items: T[], page: number, perPage: number): PaginationResult<T> {
-  const totalItems = items.length
+// Cache last pagination result to avoid repeated slice operations on same page requests
+let cachedArray: unknown[] | null = null
+let cachedStart: number | undefined = undefined
+let cachedEnd: number | undefined = undefined
+let cachedResult: PaginationResult<unknown> | null = null
+
+export function paginate<T>(
+  array: T[],
+  start: number,
+  end: number,
+): PaginationResult<T> {
+  const total = array.length
+
+  // Return cached result if same array (by reference) and same pagination indices
+  if (
+    cachedArray === array &&
+    cachedStart === start &&
+    cachedEnd === end &&
+    cachedResult !== null
+  ) {
+    return cachedResult as PaginationResult<T>
+  }h
   const safePerPage = Number.isFinite(perPage) && perPage > 0 ? Math.floor(perPage) : 1
   const pages = Math.max(1, Math.ceil(totalItems / safePerPage))
 
