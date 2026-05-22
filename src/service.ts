@@ -175,6 +175,7 @@ export class Service {
     items.push(item)
 
     await this.#db.write()
+    queryCache.clear()
     return item
   }
 
@@ -185,6 +186,7 @@ export class Service {
     const nextItem = (this.#db.data[name] = isPatch ? { ...item, ...body } : body)
 
     await this.#db.write()
+    queryCache.clear()
     return nextItem
   }
 
@@ -205,6 +207,7 @@ export class Service {
     items.splice(index, 1, nextItem)
 
     await this.#db.write()
+    queryCache.clear()
     return nextItem
   }
 
