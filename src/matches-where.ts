@@ -43,6 +43,7 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
     if (isJSONObject(value)) {
       const knownOps = getKnownOperators(value)
 
+      // Early exit on first operator failure (AND semantics)
       if (knownOps.length > 0) {
         if (field === undefined) return false
 
