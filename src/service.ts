@@ -89,6 +89,38 @@ export class Service {
     this.#db = db
   }
 
+  read(name: string, sort?: string | string[]): Item[] {
+    const data = this.#db.data[name]
+
+    if (!Array.isArray(data)) {
+      return []
+    }
+
+    if (!sort) {
+      return data
+    }
+
+    // Generate cache key from sort parameters
+    const sortKey = `${name}:${JSON.stringify(ensureArray(sort))}`
+    
+    // Check cache first
+    if (sortCache.has(sortKey)) {
+      return sortCache.get(sortKey)!
+    }
+    
+    // Compute sort and cache result
+    const sorted = sortOn(data, ensureArray(sort))
+    
+    // Implement simple LRU eviction: remove oldest entry if cache is full
+    if (sortCache.size >= MAX_SORT_CACHE_SIZE) {
+      const firstKey = sortCache.keys().next().value
+      sortCache.delete(firstKey)
+    }
+    
+    sortCache.set(sortKey, sorted)
+    return sorted
+  }
+
   #get(name: string): Item[] | Item | undefined {
     return this.#db.data[name]
   }
