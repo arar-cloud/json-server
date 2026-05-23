@@ -15,6 +15,8 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   for (const op of WHERE_OPERATORS) {
     if (op in value) {
       ops.push(op)
+      // Early termination: stop after first matching operator (common case)
+      break
     }
   }
 
