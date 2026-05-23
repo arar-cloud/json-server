@@ -6,6 +6,9 @@ import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 // Pre-compile regex at module level to avoid recompilation on every request
 const UNDERSCORE_OPERATOR_REGEX = /^(.*)_([a-z]+)$/
 
+// Cache reserved query keys at module level to avoid repeated Set construction
+const RESERVED_QUERY_KEYS = new Set(['_sort', '_start', '_end', '_like', '_page', '_per_page', '_embed', '_expand', '_fields'])
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
