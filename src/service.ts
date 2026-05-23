@@ -113,7 +113,7 @@ export class Service {
     
     // Implement simple LRU eviction: remove oldest entry if cache is full
     if (sortCache.size >= MAX_SORT_CACHE_SIZE) {
-      const firstKey = sortCache.keys().next().value
+      const firstKey = sortCache.keys().next().value as string
       sortCache.delete(firstKey)
     }
     
