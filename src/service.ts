@@ -16,6 +16,10 @@ export function isItem(obj: unknown): obj is Item {
 
 export type PaginatedItems = PaginationResult<Item>
 
+// Sort result cache: Map<sortKey, sortedArray> to avoid re-sorting identical queries
+const sortCache = new Map<string, Item[]>()
+const MAX_SORT_CACHE_SIZE = 50
+
 function ensureArray(arg: string | string[] = []): string[] {
   return Array.isArray(arg) ? arg : [arg]
 }
