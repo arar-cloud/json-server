@@ -16,7 +16,8 @@ export class NormalizedAdapter implements Adapter<Data> {
   }
 
   async read(): Promise<Data | null> {
-    const data = await this.#adapter.read()
+    try {
+      const data = await this.#adapter.read()
 
     if (data === null) {
       return null
@@ -38,10 +39,22 @@ export class NormalizedAdapter implements Adapter<Data> {
       }
     }
 
-    return data as Data
+      return data as Data
+    } catch (error) {
+      console.error('NormalizedAdapter read error:', error)
+      throw error
+    }
   }
 
   async write(data: Data): Promise<void> {
-    await this.#adapter.write({ ...data, $schema: DEFAULT_SCHEMA_PATH })
+    try {
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        throw new Error('Invalid data format for NormalizedAdapter.write')
+      }
+      await this.#adapter.write({ ...data, $schema: DEFAULT_SCHEMA_PATH })
+    } catch (error) {
+      console.error('NormalizedAdapter write error:', error)
+      throw error
+    }
   }
 }
