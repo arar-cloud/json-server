@@ -3,6 +3,9 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
+// Memoization cache for compiled filter objects
+const filterMemoCache = new Map<string, JsonObject | null>()
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
@@ -56,6 +59,12 @@ function coerceValue(value: string): string | number | boolean | null {
 }
 
 export function parseWhere(query: string): JsonObject {
+  // Check memoization cache first
+  const cached = filterMemoCache.get(query)
+  if (cached !== undefined) {
+    return cached
+  }
+
   const out: JsonObject = {}
   const params = new URLSearchParams(query)
 
@@ -65,5 +74,7 @@ export function parseWhere(query: string): JsonObject {
     setPathOp(out, path, op, rawValue)
   }
 
+  // Cache the compiled filter for future use
+  filterMemoCache.set(query, out)
   return out
 }
