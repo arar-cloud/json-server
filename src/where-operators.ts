@@ -21,13 +21,13 @@ export function isWhereOperator(value: string): value is WhereOperator {
 export function compare(value: unknown, expected: unknown, operator: WhereOperator): boolean {
   switch (operator) {
     case 'lt':
-      return (value as any) < expected
+      return (value as number) < (expected as number)
     case 'lte':
-      return (value as any) <= expected
+      return (value as number) <= (expected as number)
     case 'gt':
-      return (value as any) > expected
+      return (value as number) > (expected as number)
     case 'gte':
-      return (value as any) >= expected
+      return (value as number) >= (expected as number)
     case 'eq':
       return value === expected
     case 'ne':

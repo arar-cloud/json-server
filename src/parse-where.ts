@@ -4,7 +4,7 @@ import type { JsonObject } from 'type-fest'
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
 // Memoization cache for compiled filter objects
-const filterMemoCache = new Map<string, JsonObject | null>()
+const filterMemoCache = new Map<string, JsonObject>()
 
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   const colonIdx = key.lastIndexOf(':')
