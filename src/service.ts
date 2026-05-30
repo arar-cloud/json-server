@@ -16,6 +16,28 @@ export function isItem(obj: unknown): obj is Item {
 
 export type PaginatedItems = PaginationResult<Item>
 
+// Index cache for fast lookups on common fields
+interface IndexCache {
+  id: Map<unknown, Item>
+  postId: Map<unknown, Item>
+}
+
+function buildIndexCache(items: Item[]): IndexCache {
+  const cache: IndexCache = {
+    id: new Map(),
+    postId: new Map(),
+  }
+  for (const item of items) {
+    if (item.id !== undefined) {
+      cache.id.set(item.id, item)
+    }
+    if (item.postId !== undefined) {
+      cache.postId.set(item.postId, item)
+    }
+  }
+  return cache
+}
+
 function ensureArray(arg: string | string[] = []): string[] {
   return Array.isArray(arg) ? arg : [arg]
 }
@@ -97,7 +119,9 @@ export class Service {
     const value = this.#get(name)
 
     if (Array.isArray(value)) {
-      let item = value.find((item) => item['id'] === id)
+      // Use indexed lookup for O(1) id search
+      const indexed = buildIndexCache(value)
+      let item = indexed.id.get(id)
       ensureArray(query._embed).forEach((related) => {
         if (item !== undefined) item = embed(this.#db, name, item, related)
       })
@@ -130,7 +154,22 @@ export class Service {
       results = results.map((item) => embed(this.#db, name, item, related))
     })
 
-    results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
+    // Try indexed lookup for single-field id or postId filters (O(1) vs O(n))
+    const whereKeys = Object.keys(opts.where)
+    if (whereKeys.length === 1) {
+      const key = whereKeys[0]
+      const value = opts.where[key]
+      if (key === 'id' || key === 'postId') {
+        const indexed = buildIndexCache(results)
+        const indexMap = indexed[key as keyof IndexCache]
+        const found = indexMap.get(value)
+        results = found ? [found] : []
+      } else {
+        results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
+      }
+    } else {
+      results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
+    }
     if (opts.sort) {
       results = sortOn(results, opts.sort.split(','))
     }
