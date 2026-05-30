@@ -8,7 +8,7 @@ export class Observer<T> {
     return
   }
   onReadEnd: (data: T | null) => void = function () {
-    return
+  return
   }
   onWriteStart = function () {
     return
