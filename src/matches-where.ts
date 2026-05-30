@@ -1,6 +1,6 @@
 import type { JsonObject } from 'type-fest'
 
-import { WHERE_OPERATORS, type WhereOperator } from './where-operators.ts'
+import { WHERE_OPERATORS_SET, type WhereOperator } from './where-operators.ts'
 
 // Cache compiled regex patterns to avoid recompilation per record
 const regexCache = new Map<string, RegExp>()
@@ -15,9 +15,9 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   if (!isJSONObject(value)) return []
 
   const ops: WhereOperator[] = []
-  for (const op of WHERE_OPERATORS) {
-    if (op in value) {
-      ops.push(op)
+  for (const key in value) {
+    if (WHERE_OPERATORS_SET.has(key as WhereOperator)) {
+      ops.push(key as WhereOperator)
     }
   }
 
