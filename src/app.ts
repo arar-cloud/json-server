@@ -32,8 +32,12 @@ function parseListParams(req: any) {
   const params = new URLSearchParams(queryString)
 
   const filterParams = new URLSearchParams()
+  let processedReservedKeys = 0
   for (const [key, value] of params.entries()) {
-    if (!RESERVED_QUERY_KEYS.has(key)) {
+    if (RESERVED_QUERY_KEYS.has(key)) {
+      processedReservedKeys++
+      if (processedReservedKeys === RESERVED_QUERY_KEYS.size) break
+    } else {
       filterParams.append(key, value)
     }
   }
