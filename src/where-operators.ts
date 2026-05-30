@@ -14,8 +14,10 @@ export const WHERE_OPERATORS = [
 export type WhereOperator = (typeof WHERE_OPERATORS)[number]
 
 export function isWhereOperator(value: string): value is WhereOperator {
-  return (WHERE_OPERATORS as readonly string[]).includes(value)
+  return WHERE_OPERATORS_SET.has(value as WhereOperator)
 }
+
+const WHERE_OPERATORS_SET = new Set<WhereOperator>(WHERE_OPERATORS)
 
 // Short-circuit comparison operators - return early once result is determined
 export function compare(value: unknown, expected: unknown, operator: WhereOperator): boolean {
