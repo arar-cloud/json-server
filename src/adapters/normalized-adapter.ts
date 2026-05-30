@@ -19,16 +19,21 @@ export class NormalizedAdapter implements Adapter<Data> {
   }
 
   async read(): Promise<Data | null> {
-    const data = await this.#adapter.read()
+    const rawData = await this.#adapter.read()
 
-    if (data === null) {
+    if (rawData === null) {
       return null
     }
 
-    delete data['$schema']
+    // Check cache first to avoid redundant transformations
+    if (readCache.has(rawData as Data)) {
+      return readCache.get(rawData as Data) ?? null
+    }
+
+    delete rawData['$schema']
 
     // Apply transformations with cached state to avoid repeated id normalization
-    const transformedData = data as Data
+    const transformedData = rawData as Data
     for (const value of Object.values(transformedData)) {
       if (Array.isArray(value)) {
         for (const item of value) {
@@ -43,6 +48,8 @@ export class NormalizedAdapter implements Adapter<Data> {
       }
     }
 
+    // Populate cache for subsequent reads
+    readCache.set(transformedData, transformedData)
     return transformedData
   }
 
