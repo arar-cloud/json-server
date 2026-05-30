@@ -32,21 +32,25 @@ function parseListParams(req: any) {
   const params = new URLSearchParams(queryString)
 
   const filterParams = new URLSearchParams()
-  let processedReservedKeys = 0
+  const reserved = {
+    _sort: undefined as string | undefined,
+    _page: undefined as string | undefined,
+    _per_page: undefined as string | undefined,
+    _where: undefined as string | undefined,
+  }
+
   for (const [key, value] of params.entries()) {
-    if (RESERVED_QUERY_KEYS.has(key)) {
-      processedReservedKeys++
-      if (processedReservedKeys === RESERVED_QUERY_KEYS.size) break
-    } else {
-      filterParams.append(key, value)
-    }
+    if (key === '_sort') reserved._sort = value
+    else if (key === '_page') reserved._page = value
+    else if (key === '_per_page') reserved._per_page = value
+    else if (key === '_where') reserved._where = value
+    else if (key !== '_embed') filterParams.append(key, value)
   }
 
   let where = parseWhere(filterParams.toString())
-  const rawWhere = params.get('_where')
-  if (typeof rawWhere === 'string') {
+  if (typeof reserved._where === 'string') {
     try {
-      const parsed = JSON.parse(rawWhere)
+      const parsed = JSON.parse(reserved._where)
       if (typeof parsed === 'object' && parsed !== null) {
         where = parsed
       }
@@ -55,14 +59,12 @@ function parseListParams(req: any) {
     }
   }
 
-  const pageRaw = params.get('_page')
-  const perPageRaw = params.get('_per_page')
-  const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
-  const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
+  const page = reserved._page === undefined ? undefined : Number.parseInt(reserved._page, 10)
+  const perPage = reserved._per_page === undefined ? undefined : Number.parseInt(reserved._per_page, 10)
 
   return {
     where,
-    sort: params.get('_sort') ?? undefined,
+    sort: reserved._sort ?? undefined,
     page: Number.isNaN(page) ? undefined : page,
     perPage: Number.isNaN(perPage) ? undefined : perPage,
     embed: req.query['_embed'],
