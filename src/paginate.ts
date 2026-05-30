@@ -22,9 +22,10 @@ export function paginate<T>(items: T[], page: number, perPage: number): Paginati
   const next = currentPage < pages ? currentPage + 1 : null
   const last = pages
 
-  const start = (currentPage - 1) * safePerPage
-  const end = start + safePerPage
-  const data = items.slice(start, end)
+  // Lazy slice: only compute boundaries and slice the required portion
+  const start = Math.max(0, (currentPage - 1) * safePerPage)
+  const end = Math.min(items.length, start + safePerPage)
+  const data = end > start ? items.slice(start, end) : []
 
   return {
     first,
