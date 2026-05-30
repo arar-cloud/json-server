@@ -3,7 +3,9 @@ import type { JsonObject } from 'type-fest'
 import { WHERE_OPERATORS_SET, type WhereOperator } from './where-operators.ts'
 
 // Cache compiled regex patterns to avoid recompilation per record
+// Limit cache to 256 patterns to prevent unbounded memory growth
 const regexCache = new Map<string, RegExp>()
+const MAX_REGEX_CACHE_SIZE = 256
 
 type OperatorObject = Partial<Record<WhereOperator, unknown>>
 
@@ -71,6 +73,11 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
                 const regexBody = pattern.slice(1, lastSlash)
                 const flags = pattern.slice(lastSlash + 1)
                 regex = new RegExp(regexBody, flags)
+                // Implement LRU eviction if cache exceeds size limit
+                if (regexCache.size >= MAX_REGEX_CACHE_SIZE) {
+                  const firstKey = regexCache.keys().next().value
+                  regexCache.delete(firstKey)
+                }
                 regexCache.set(pattern, regex)
               }
               if (!regex.test(field)) return false
