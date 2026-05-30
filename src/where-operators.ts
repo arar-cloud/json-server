@@ -16,3 +16,31 @@ export type WhereOperator = (typeof WHERE_OPERATORS)[number]
 export function isWhereOperator(value: string): value is WhereOperator {
   return (WHERE_OPERATORS as readonly string[]).includes(value)
 }
+
+// Short-circuit comparison operators - return early once result is determined
+export function compare(value: unknown, expected: unknown, operator: WhereOperator): boolean {
+  switch (operator) {
+    case 'lt':
+      return (value as any) < expected
+    case 'lte':
+      return (value as any) <= expected
+    case 'gt':
+      return (value as any) > expected
+    case 'gte':
+      return (value as any) >= expected
+    case 'eq':
+      return value === expected
+    case 'ne':
+      return value !== expected
+    case 'in':
+      return (expected as any[]).includes(value)
+    case 'contains':
+      return (value as string)?.includes(expected as string) ?? false
+    case 'startsWith':
+      return (value as string)?.startsWith(expected as string) ?? false
+    case 'endsWith':
+      return (value as string)?.endsWith(expected as string) ?? false
+    default:
+      return false
+  }
+}
