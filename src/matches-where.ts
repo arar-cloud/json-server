@@ -1,6 +1,6 @@
 import type { JsonObject } from 'type-fest'
 
-import { WHERE_OPERATORS_SET, type WhereOperator } from './where-operators.ts'
+import { WHERE_OPERATORS, type WhereOperator } from './where-operators.ts'
 
 // Cache compiled regex patterns to avoid recompilation per record
 // Limit cache to 256 patterns to prevent unbounded memory growth
