@@ -3,6 +3,9 @@ import type { Adapter } from 'lowdb'
 import { randomId } from '../random-id.ts'
 import type { Data, Item } from '../service.ts'
 
+// Cache for normalized read operations to avoid redundant transformations
+const readCache = new WeakMap<Data, Data>()
+
 export const DEFAULT_SCHEMA_PATH = './node_modules/json-server/schema.json'
 export type RawData = Record<string, Item[] | Item | string | undefined> & {
   $schema?: string
@@ -24,7 +27,9 @@ export class NormalizedAdapter implements Adapter<Data> {
 
     delete data['$schema']
 
-    for (const value of Object.values(data)) {
+    // Apply transformations with cached state to avoid repeated id normalization
+    const transformedData = data as Data
+    for (const value of Object.values(transformedData)) {
       if (Array.isArray(value)) {
         for (const item of value) {
           if (typeof item['id'] === 'number') {
@@ -38,7 +43,7 @@ export class NormalizedAdapter implements Adapter<Data> {
       }
     }
 
-    return data as Data
+    return transformedData
   }
 
   async write(data: Data): Promise<void> {
