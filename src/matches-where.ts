@@ -2,6 +2,9 @@ import type { JsonObject } from 'type-fest'
 
 import { WHERE_OPERATORS, type WhereOperator } from './where-operators.ts'
 
+// Cache compiled regex patterns to avoid recompilation per record
+const regexCache = new Map<string, RegExp>()
+
 type OperatorObject = Partial<Record<WhereOperator, unknown>>
 
 function isJSONObject(value: unknown): value is JsonObject {
@@ -59,7 +62,20 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
         }
         if (knownOps.includes('contains')) {
           if (typeof field !== 'string') return false
-          if (!field.toLowerCase().includes(String(op.contains).toLowerCase())) return false
+          const pattern = String(op.contains)
+          if (pattern.startsWith('/') && pattern.includes('/')) {
+            const lastSlash = pattern.lastIndexOf('/')
+            if (lastSlash > 0) {
+              let regex = regexCache.get(pattern)
+              if (!regex) {
+                const regexBody = pattern.slice(1, lastSlash)
+                const flags = pattern.slice(lastSlash + 1)
+                regex = new RegExp(regexBody, flags)
+                regexCache.set(pattern, regex)
+              }
+              if (!regex.test(field)) return false
+            } else if (!field.toLowerCase().includes(pattern.toLowerCase())) return false
+          } else if (!field.toLowerCase().includes(pattern.toLowerCase())) return false
         }
         if (knownOps.includes('startsWith')) {
           if (typeof field !== 'string') return false
