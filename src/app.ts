@@ -40,7 +40,10 @@ const RESERVED_QUERY_KEYS = new Set<string>([
   '_per_page',  // items per page
   '_embed',     // embed related resources
   '_expand',    // expand nested properties
-  '_where'      // complex filtering conditions
+  '_where',     // complex filtering conditions
+  '_offset',    // offset for pagination (alternative to _start)
+  '_count',     // count-only result flag
+  '_cache'      // cache control parameter
 ])
 
 function parseListParams(req: any) {
