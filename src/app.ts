@@ -57,7 +57,7 @@ function parseListParams(req: any) {
 
   let where = parseWhere(filterParams.toString())
   const rawWhere = params.get('_where')
-  if (typeof rawWhere === 'string') {
+  if (typeof rawWhere === 'string' && rawWhere !== '') {
     try {
       if (rawWhere.length > 10000) {
         throw new Error('_where parameter exceeds maximum length')
@@ -67,7 +67,17 @@ function parseListParams(req: any) {
         where = parsed
       }
     } catch (e) {
-      console.warn(`Invalid _where parameter: ${e instanceof Error ? e.message : 'unknown error'}`)
+      const errorMsg = e instanceof Error ? e.message : 'unknown error'
+      console.error(`Failed to parse _where parameter: ${errorMsg}`)
+      return {
+        where: {},
+        sort: params.get('_sort') ?? undefined,
+        page: undefined,
+        perPage: undefined,
+        embed: undefined,
+        parseError: true,
+        parseErrorMessage: errorMsg,
+      }
     }
   }
 
