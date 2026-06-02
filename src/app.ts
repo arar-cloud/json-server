@@ -149,7 +149,12 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
 
   app.get('/:name', (req, res, next) => {
     const { name = '' } = req.params
-    const { where, sort, page, perPage, embed } = parseListParams(req)
+    const { where, sort, page, perPage, embed, error } = parseListParams(req)
+
+    if (error) {
+      res.status(400).json({ error })
+      return
+    }
 
     res.locals['data'] = service.find(name, {
       where,
