@@ -46,9 +46,10 @@ function parseListParams(req: any) {
 
   const filterParams = new URLSearchParams()
   for (const [key, value] of params.entries()) {
-    if (!RESERVED_QUERY_KEYS.has(key)) {
-      filterParams.append(key, value)
-    }
+    if (RESERVED_QUERY_KEYS.has(key)) continue
+    // Skip empty filter values to avoid matching null/undefined
+    if (value === '' || value === null) continue
+    filterParams.append(key, value)
   }
 
   let where = parseWhere(filterParams.toString())
