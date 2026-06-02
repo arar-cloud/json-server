@@ -46,7 +46,8 @@ function parseListParams(req: any) {
       if (typeof parsed === 'object' && parsed !== null) {
         where = parsed
       }
-    } catch {
+    } catch (e) {
+      console.error(`Failed to parse _where parameter: "${rawWhere}"`, e)
       // Ignore invalid JSON and fallback to parsed query params
     }
   }
