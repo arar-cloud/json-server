@@ -26,8 +26,6 @@ export type AppOptions = {
 const eta = new Eta({
   views: join(__dirname, '../views'),
   cache: isProduction,
-  // Use async caching to prevent race conditions
-  async: true
 })
 
 // Reserved query parameters that are handled by json-server
@@ -131,9 +129,6 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     service = new Service(db)
   } catch (err) {
     console.error('Failed to initialize Service:', err instanceof Error ? err.message : 'unknown error')
-    app.use((req: any, res: any) => {
-      res.status(503).json({ error: 'Service initialization failed' })
-    })
     throw err
   }
 
