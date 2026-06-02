@@ -56,12 +56,15 @@ function parseListParams(req: any) {
   const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
   const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
 
+  const embedParam = req.query['_embed']
+  const embed = embedParam && typeof embedParam === 'string' ? embedParam : undefined
+
   return {
     where,
     sort: params.get('_sort') ?? undefined,
     page: Number.isNaN(page) ? undefined : page,
     perPage: Number.isNaN(perPage) ? undefined : perPage,
-    embed: req.query['_embed'],
+    embed,
   }
 }
 
