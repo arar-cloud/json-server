@@ -8,7 +8,7 @@ export type PaginationResult<T> = {
   data: T[]
 }
 
-export function paginate<T>(items: T[], page: number, perPage: number): PaginationResult<T> {
+export function paginate<T>(items: T[], page: number, perPage:Num number): PaginationResult<T> {
   const totalItems = items.length
   const safePerPage = Number.isFinite(perPage) && perPage > 0 ? Math.floor(perPage) : 1
   const pages = Math.max(1, Math.ceil(totalItems / safePerPage))
