@@ -98,6 +98,12 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   // Create app
   const app = new App()
 
+  // Initialize res.locals
+  app.use((req, res, next) => {
+    res.locals = res.locals || {}
+    next()
+  })
+
   // Static files
   app.use(sirv('public', { dev: !isProduction }))
   options.static
