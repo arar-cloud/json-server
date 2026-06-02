@@ -42,12 +42,15 @@ function parseListParams(req: any) {
   const rawWhere = params.get('_where')
   if (typeof rawWhere === 'string') {
     try {
+      if (rawWhere.length > 10000) {
+        throw new Error('_where parameter exceeds maximum length')
+      }
       const parsed = JSON.parse(rawWhere)
       if (typeof parsed === 'object' && parsed !== null) {
         where = parsed
       }
-    } catch {
-      // Ignore invalid JSON and fallback to parsed query params
+    } catch (e) {
+      console.warn(`Invalid _where parameter: ${e instanceof Error ? e.message : 'unknown error'}`)
     }
   }
 
