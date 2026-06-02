@@ -25,7 +25,20 @@ const eta = new Eta({
   cache: isProduction,
 })
 
-const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
+// Reserved query parameters that are handled by json-server
+// These should not be passed to filters
+const RESERVED_QUERY_KEYS = new Set<string>([
+  '_sort',      // sorting parameter
+  '_order',     // sort order (asc/desc)
+  '_start',     // start index for pagination
+  '_end',       // end index for pagination
+  '_limit',     // number of items to return
+  '_page',      // page number
+  '_per_page',  // items per page
+  '_embed',     // embed related resources
+  '_expand',    // expand nested properties
+  '_where'      // complex filtering conditions
+])
 
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
