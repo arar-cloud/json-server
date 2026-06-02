@@ -74,8 +74,12 @@ function parseListParams(req: any) {
 function withBody(action: (name: string, body: Record<string, unknown>) => Promise<unknown>) {
   return async (req: any, res: any, next: any) => {
     const { name = '' } = req.params
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      res.status(400).json({ error: 'Request body must be a JSON object' })
+      return
+    }
     if (!isItem(req.body)) {
-      res.status(400).json({ error: 'Body must be a JSON object' })
+      res.status(400).json({ error: 'Body validation failed' })
       return
     }
     res.locals['data'] = await action(name, req.body)
@@ -88,8 +92,12 @@ function withIdAndBody(
 ) {
   return async (req: any, res: any, next: any) => {
     const { name = '', id = '' } = req.params
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      res.status(400).json({ error: 'Request body must be a JSON object' })
+      return
+    }
     if (!isItem(req.body)) {
-      res.status(400).json({ error: 'Body must be a JSON object' })
+      res.status(400).json({ error: 'Body validation failed' })
       return
     }
     res.locals['data'] = await action(name, id, req.body)
