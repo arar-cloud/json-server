@@ -73,8 +73,12 @@ function withBody(action: (name: string, body: Record<string, unknown>) => Promi
       res.status(400).json({ error: 'Body must be a JSON object' })
       return
     }
-    res.locals['data'] = await action(name, req.body)
-    next?.()
+    try {
+      res.locals['data'] = await action(name, req.body)
+      next?.()
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' })
+    }
   }
 }
 
@@ -102,7 +106,7 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   // Initialize res.locals
   app.use((req, res, next) => {
     res.locals = res.locals || {}
-    next()
+    next?.()
   })
 
   // Static files
