@@ -90,12 +90,20 @@ function withIdAndBody(
 ) {
   return async (req: any, res: any, next: any) => {
     const { name = '', id = '' } = req.params
+    if (!id) {
+      res.status(400).json({ error: 'ID parameter is required' })
+      return
+    }
     if (!isItem(req.body)) {
       res.status(400).json({ error: 'Body must be a JSON object' })
       return
     }
-    res.locals['data'] = await action(name, id, req.body)
-    next?.()
+    try {
+      res.locals['data'] = await action(name, id, req.body)
+      next?.()
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' })
+    }
   }
 }
 
