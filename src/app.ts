@@ -38,6 +38,8 @@ function parseListParams(req: any) {
     }
   }
 
+  let parseError: string | null = null
+
   let where = parseWhere(filterParams.toString())
   const rawWhere = params.get('_where')
   let parseWhereError: Error | null = null
