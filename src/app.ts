@@ -121,7 +121,16 @@ function withIdAndBody(
 
 export function createApp(db: Low<Data>, options: AppOptions = {}) {
   // Create service
-  const service = new Service(db)
+  let service: Service
+  try {
+    service = new Service(db)
+  } catch (err) {
+    console.error('Failed to initialize Service:', err instanceof Error ? err.message : 'unknown error')
+    app.use((req: any, res: any) => {
+      res.status(503).json({ error: 'Service initialization failed' })
+    })
+    throw err
+  }
 
   // Create app
   const app = new App()
