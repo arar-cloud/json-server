@@ -12,7 +12,12 @@ function splitKey(key: string): { path: string; op: WhereOperator | null } {
       return { path: key, op: 'eq' }
     }
 
-    return isWhereOperator(op) ? { path, op } : { path, op: null }
+    if (isWhereOperator(op)) {
+      return { path, op }
+    }
+    // Invalid operator: treat entire key as path with eq operator
+    console.warn(`Unknown operator '${op}' in key '${key}', treating as property name`)
+    return { path: key, op: 'eq' }
   }
 
   // Compatibility with v0.17 operator style (e.g. _lt, _gt)
