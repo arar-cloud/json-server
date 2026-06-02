@@ -56,6 +56,9 @@ function coerceValue(value: string): string | number | boolean | null {
 }
 
 export function parseWhere(query: string): JsonObject {
+  if (!query || query.trim() === '') {
+    return {}
+  }
   const out: JsonObject = {}
   const params = new URLSearchParams(query)
 
