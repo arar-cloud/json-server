@@ -11,7 +11,7 @@ export type Item = Record<string, unknown>
 export type Data = Record<string, Item[] | Item>
 
 export function isItem(obj: unknown): obj is Item {
-  return typeof obj === 'object' && obj !== null && !Array.isArray(obj)
+  return typeof obj === 'object' && obj !== null && !Array.isArray(obj) && !(obj instanceof Date)
 }
 
 export type PaginatedItems = PaginationResult<Item>
