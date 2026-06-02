@@ -173,14 +173,20 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
 
   app.get('/:name', (req, res, next) => {
     const { name = '' } = req.params
-    const { where, sort, page, perPage, embed } = parseListParams(req)
+    const result = parseListParams(req)
+    
+    // Check for parse errors and return 400 if _where parsing failed
+    if (result.parseError) {
+      res.status(400).json({ error: 'Invalid _where parameter', details: result.parseErrorMessage })
+      return
+    }
 
     res.locals['data'] = service.find(name, {
-      where,
-      sort,
-      page,
-      perPage,
-      embed,
+      where: result.where,
+      sort: result.sort,
+      page: result.page,
+      perPage: result.perPage,
+      embed: result.embed,
     })
     next?.()
   })
