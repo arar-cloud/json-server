@@ -60,6 +60,11 @@ function parseListParams(req: any) {
   const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
   const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
 
+  // Validate pagination bounds
+  const maxPerPage = 10000
+  const validPage = page && page > 0 ? page : undefined
+  const validPerPage = perPage && perPage > 0 && perPage <= maxPerPage ? perPage : undefined
+
   return {
     where,
     sort: params.get('_sort') ?? undefined,
