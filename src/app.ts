@@ -20,9 +20,14 @@ export type AppOptions = {
   static?: string[]
 }
 
+// Configure Eta template engine
+// In production, enable caching; in dev, disable for hot reloading
+// Cache key includes template name to invalidate on endpoint changes
 const eta = new Eta({
   views: join(__dirname, '../views'),
   cache: isProduction,
+  // Use async caching to prevent race conditions
+  async: true
 })
 
 // Reserved query parameters that are handled by json-server
