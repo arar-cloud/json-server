@@ -68,8 +68,8 @@ function parseListParams(req: any) {
   return {
     where,
     sort: params.get('_sort') ?? undefined,
-    page: Number.isNaN(page) ? undefined : page,
-    perPage: Number.isNaN(perPage) ? undefined : perPage,
+    page: validPage,
+    perPage: validPerPage,
     embed: typeof req.query?.['_embed'] === 'string' ? req.query['_embed'] : undefined,
   }
 }
