@@ -11,7 +11,17 @@ export type Item = Record<string, unknown>
 export type Data = Record<string, Item[] | Item>
 
 export function isItem(obj: unknown): obj is Item {
-  return typeof obj === 'object' && obj !== null && !Array.isArray(obj)
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
+    return false
+  }
+  
+  // Validate that item properties don't contain functions
+  const isValidObject = Object.keys(obj).every((key) => {
+    const value = (obj as any)[key]
+    return typeof value !== 'function'
+  })
+  
+  return isValidObject
 }
 
 export type PaginatedItems = PaginationResult<Item>
