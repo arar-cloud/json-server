@@ -69,8 +69,8 @@ function parseListParams(req: any) {
   const rawWhere = params.get('_where')
   if (typeof rawWhere === 'string' && rawWhere !== '') {
     try {
-      if (rawWhere.length > 10000) {
-        throw new Error('_where parameter exceeds maximum length')
+      if (rawWhere.length > 5000) {
+        throw new Error('_where parameter exceeds maximum length (5000 characters)')
       }
       const parsed = JSON.parse(rawWhere)
       if (typeof parsed === 'object' && parsed !== null) {
