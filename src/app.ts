@@ -86,7 +86,7 @@ function parseListParams(req: any) {
 }
 
 function withBody(action: (name: string, body: Record<string, unknown>) => Promise<unknown>) {
-  return async (req: any, res: any, next: any) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     const { name = '' } = req.params
     if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
       res.status(400).json({ error: 'Request body must be a JSON object' })
@@ -104,7 +104,7 @@ function withBody(action: (name: string, body: Record<string, unknown>) => Promi
 function withIdAndBody(
   action: (name: string, id: string, body: Record<string, unknown>) => Promise<unknown>,
 ) {
-  return async (req: any, res: any, next: any) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     const { name = '', id = '' } = req.params
     if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
       res.status(400).json({ error: 'Request body must be a JSON object' })
