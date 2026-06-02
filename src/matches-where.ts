@@ -15,15 +15,7 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   for (const op of WHERE_OPERATORS) {
     if (op in value) {
       ops.push(op)
-    let itemValue: any
-      try {
-        itemValue = dotProp.get(item, key)
-      } catch (e) {
-        // Property access failed (e.g., invalid nested path)
-        return false
-      }
-
-  }
+    }
   }
 
   return ops
@@ -93,4 +85,14 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
   }
 
   return true
+}
+
+export function matchesWhereWithErrorHandling(obj: JsonObject, where: JsonObject): boolean {
+  try {
+    return matchesWhere(obj, where)
+  } catch (e) {
+    // Log unexpected filter matching errors but don't crash
+    console.error('Error during filter matching:', e instanceof Error ? e.message : 'unknown error')
+    return false
+  }
 }
