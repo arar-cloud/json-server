@@ -99,6 +99,8 @@ function parseListParams(req: any) {
     page: Number.isNaN(page) ? undefined : page,
     perPage: Number.isNaN(perPage) ? undefined : perPage,
     embed,
+    parseError: false,
+    parseErrorMessage: undefined,
   }
 }
 
