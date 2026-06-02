@@ -42,7 +42,6 @@ function parseListParams(req: any) {
 
   let where = parseWhere(filterParams.toString())
   const rawWhere = params.get('_where')
-  let parseWhereError: Error | null = null
   if (typeof rawWhere === 'string') {
     try {
       const parsed = JSON.parse(rawWhere)
@@ -50,8 +49,8 @@ function parseListParams(req: any) {
         where = parsed
       }
     } catch (e) {
-      parseWhereError = e instanceof Error ? e : new Error(String(e))
-      console.error(`Failed to parse _where parameter: "${rawWhere}"`, parseWhereError)
+      parseError = `Invalid _where parameter: ${e instanceof Error ? e.message : String(e)}`
+      console.error(parseError)
     }
   }
 
@@ -71,6 +70,7 @@ function parseListParams(req: any) {
     page: validPage,
     perPage: validPerPage,
     embed: typeof req.query?.['_embed'] === 'string' ? req.query['_embed'] : undefined,
+    error: parseError,
   }
 }
 
