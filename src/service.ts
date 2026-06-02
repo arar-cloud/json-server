@@ -127,6 +127,8 @@ export class Service {
       embed?: string | string[]
     },
   ): Item[] | PaginatedItems | Item | undefined {
+    // Create request-scoped context to prevent concurrent filter state mutations
+    const filterContext = Object.freeze({ ...opts })
     const items = this.#get(name)
 
     if (!Array.isArray(items)) {
@@ -136,11 +138,11 @@ export class Service {
     let results = items
 
     // Include
-    ensureArray(opts.embed).forEach((related) => {
+    ensureArray(filterContext.embed).forEach((related) => {
       results = results.map((item) => embed(this.#db, name, item, related))
     })
 
-    results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
+    results = results.filter((item) => matchesWhere(item as JsonObject, filterContext.where))
     if (opts.sort) {
       results = sortOn(results, opts.sort.split(','))
     }
