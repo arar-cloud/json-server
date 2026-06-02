@@ -1,7 +1,7 @@
 import { dirname, isAbsolute, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { App } from '@tinyhttp/app'
+import { App, type Request, type Response, type NextFunction } from '@tinyhttp/app'
 import { cors } from '@tinyhttp/cors'
 import { Eta } from 'eta'
 import { Low } from 'lowdb'
