@@ -15,7 +15,15 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   for (const op of WHERE_OPERATORS) {
     if (op in value) {
       ops.push(op)
-    }
+    let itemValue: any
+      try {
+        itemValue = dotProp.get(item, key)
+      } catch (e) {
+        // Property access failed (e.g., invalid nested path)
+        return false
+      }
+
+  }
   }
 
   return ops
