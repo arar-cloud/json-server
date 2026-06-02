@@ -59,7 +59,13 @@ function parseListParams(req: any) {
     filterParams.append(key, value)
   }
 
-  let where = parseWhere(filterParams.toString())
+  let where: any = parseWhere(filterParams.toString())
+  
+  // Validate parseWhere output is an object
+  if (where !== null && typeof where !== 'object') {
+    console.error('parseWhere returned non-object type:', typeof where)
+    where = {}
+  }
   const rawWhere = params.get('_where')
   if (typeof rawWhere === 'string' && rawWhere !== '') {
     try {
