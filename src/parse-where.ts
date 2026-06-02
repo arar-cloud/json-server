@@ -60,6 +60,7 @@ export function parseWhere(query: string): JsonObject {
   const params = new URLSearchParams(query)
 
   for (const [rawKey, rawValue] of params.entries()) {
+    if (!rawKey) continue
     const { path, op } = splitKey(rawKey)
     if (op === null) continue
     setPathOp(out, path, op, rawValue)
