@@ -14,7 +14,8 @@ export function paginate<T>(items: T[], page: number, perPage: number): Paginati
   const pages = Math.max(1, Math.ceil(totalItems / safePerPage))
 
   // Ensure page is within the valid range
-  const safePage = Number.isFinite(page) ? Math.floor(page) : 1
+  // Boundary checks: page <= 0 and perPage <= 0 handled above
+  const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1
   const currentPage = Math.max(1, Math.min(safePage, pages))
 
   const first = 1
@@ -24,7 +25,8 @@ export function paginate<T>(items: T[], page: number, perPage: number): Paginati
 
   const start = (currentPage - 1) * safePerPage
   const end = start + safePerPage
-  const data = items.slice(start, end)
+  // Explicit bounds checking to prevent off-by-one errors and array overruns
+  const data = items.slice(Math.max(0, start), Math.min(totalItems, end))
 
   return {
     first,
