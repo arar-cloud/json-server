@@ -139,6 +139,16 @@ const observer = new Observer(new NormalizedAdapter(adapter));
 const db = new Low<Data>(observer, {});
 await db.read();
 
+async function verifyDatabaseReady(): Promise<boolean> {
+  try {
+    const data = await db.read();
+    return data !== null && typeof data === 'object';
+  } catch (error) {
+    console.error('Database read verification failed:', error);
+    return false;
+  }
+}
+
 // Create app
 const app = createApp(db, { logger: false, static: staticArr });
 
@@ -162,7 +172,13 @@ function randomItem(items: string[]): string {
   return items.at(index) ?? "";
 }
 
-app.listen(port, () => {
+app.listen(port, async () => {
+  const isReady = await verifyDatabaseReady();
+  if (!isReady) {
+    console.error('✗ Database not ready. Server starting in degraded mode.');
+    process.exit(1);
+  }
+
   console.log(
     [
       chalk.bold(`JSON Server started on PORT :${port}`),
