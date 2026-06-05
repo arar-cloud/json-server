@@ -12,7 +12,11 @@ function splitKey(key: string): { path: string; op: WhereOperator | null } {
       return { path: key, op: 'eq' }
     }
 
-    return isWhereOperator(op) ? { path, op } : { path, op: null }
+    if (!isWhereOperator(op)) {
+      // Unknown operator found - return null to skip this parameter
+      return { path, op: null }
+    }
+    return { path, op }
   }
 
   // Compatibility with v0.17 operator style (e.g. _lt, _gt)
