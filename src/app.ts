@@ -28,8 +28,18 @@ const eta = new Eta({
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
 
 function parseListParams(req: any) {
+  const MAX_PAGE = 1000000
+  const MAX_PER_PAGE = 100000
+  const MAX_EMBED_DEPTH = 3
+  const MAX_QUERY_PARAMS = 50
+
   const queryString = req.url.split('?')[1] ?? ''
   const params = new URLSearchParams(queryString)
+
+  // Count query parameters for complexity limiting
+  if (params.size > MAX_QUERY_PARAMS) {
+    throw new Error('Too many query parameters')
+  }
 
   const filterParams = new URLSearchParams()
   for (const [key, value] of params.entries()) {
@@ -53,15 +63,25 @@ function parseListParams(req: any) {
 
   const pageRaw = params.get('_page')
   const perPageRaw = params.get('_per_page')
-  const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
-  const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
+  let page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
+  let perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
+
+  // Bounds checking on pagination parameters
+  if (page !== undefined && (Number.isNaN(page) || page < 1 || page > MAX_PAGE)) page = undefined
+  if (perPage !== undefined && (Number.isNaN(perPage) || perPage < 1 || perPage > MAX_PER_PAGE)) perPage = undefined
+
+  const embed = req.query['_embed']
+  // Enforce embed depth limit
+  if (Array.isArray(embed) && embed.length > MAX_EMBED_DEPTH) {
+    throw new Error(`Embed depth limited to ${MAX_EMBED_DEPTH}`)
+  }
 
   return {
     where,
     sort: params.get('_sort') ?? undefined,
-    page: Number.isNaN(page) ? undefined : page,
-    perPage: Number.isNaN(perPage) ? undefined : perPage,
-    embed: req.query['_embed'],
+    page: page,
+    perPage: perPage,
+    embed: embed,
   }
 }
 
