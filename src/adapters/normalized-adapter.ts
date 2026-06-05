@@ -10,9 +10,16 @@ export type RawData = Record<string, Item[] | Item | string | undefined> & {
 
 export class NormalizedAdapter implements Adapter<Data> {
   #adapter: Adapter<RawData>
+  #lastWriteTime: number = 0
+  #cacheValidUntil: number = 0
+  readonly CACHE_TTL_MS = 100 // Cache valid for 100ms after write
 
   constructor(adapter: Adapter<RawData>) {
     this.#adapter = adapter
+  }
+
+  #isCacheValid(): boolean {
+    return Date.now() < this.#cacheValidUntil
   }
 
   async read(): Promise<Data | null> {
@@ -42,6 +49,9 @@ export class NormalizedAdapter implements Adapter<Data> {
   }
 
   async write(data: Data): Promise<void> {
+    this.#lastWriteTime = Date.now()
+    // Set cache validity period - forces reread if concurrent write occurs
+    this.#cacheValidUntil = Date.now() + this.CACHE_TTL_MS
     await this.#adapter.write({ ...data, $schema: DEFAULT_SCHEMA_PATH })
   }
 }
