@@ -60,9 +60,11 @@ function parseListParams(req: any) {
   if (typeof rawWhere === 'string') {
     where = parseWhere(rawWhere)
     // On invalid _where, silently skip it (where will be empty/falsy)
+  } else {
+    // Only parse filter entries if no _where clause provided
+    // Avoids redundant parseWhere call when _where already covers filtering
+    where = parseWhere(new URLSearchParams(filterEntries).toString())
   }
-  // Always parse filter entries as baseline; they merge with where clause in service
-  where = parseWhere(new URLSearchParams(filterEntries).toString())
 
   const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
   const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
