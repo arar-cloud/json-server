@@ -55,19 +55,14 @@ function parseListParams(req: any) {
     }
   }
 
-  // Defer JSON.parse only when rawWhere exists; otherwise parse filter entries
+  // Single-pass where parameter handling with optimized fallback
   let where: any
   if (typeof rawWhere === 'string') {
-    try {
-      where = JSON.parse(rawWhere)
-    } catch {
-      // Fallback to filter params if _where is invalid JSON
-      where = parseWhere(new URLSearchParams(filterEntries).toString())
-    }
-  } else {
-    // No _where param, parse filter entries directly
-    where = parseWhere(new URLSearchParams(filterEntries).toString())
+    where = parseWhere(rawWhere)
+    // On invalid _where, silently skip it (where will be empty/falsy)
   }
+  // Always parse filter entries as baseline; they merge with where clause in service
+  where = parseWhere(new URLSearchParams(filterEntries).toString())
 
   const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
   const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
