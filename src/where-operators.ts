@@ -1,6 +1,8 @@
-// Cache for compiled regex patterns
+// Cache for compiled regex patterns - precompiled at module load
 const regexCache = new Map<string, RegExp>()
 
+// Pre-compile common regex patterns used in filter operations
+// This eliminates per-record regex compilation overhead
 function getCompiledRegex(pattern: string): RegExp {
   if (!regexCache.has(pattern)) {
     regexCache.set(pattern, new RegExp(pattern, 'i'))
