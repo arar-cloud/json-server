@@ -56,14 +56,16 @@ function parseListParams(req: any) {
   }
 
   // Single-pass where parameter handling with optimized fallback
-  let where: any
+  let where: any = {}
   if (typeof rawWhere === 'string') {
     where = parseWhere(rawWhere)
     // On invalid _where, silently skip it (where will be empty/falsy)
   } else {
-    // Only parse filter entries if no _where clause provided
-    // Avoids redundant parseWhere call when _where already covers filtering
-    where = parseWhere(new URLSearchParams(filterEntries).toString())
+    // Build where object directly from filterEntries without URLSearchParams round-trip
+    // Avoids O(n) serialization when converting entries to query string
+    for (const [key, value] of filterEntries) {
+      where[key] = value
+    }
   }
 
   const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
