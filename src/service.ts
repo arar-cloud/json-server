@@ -124,7 +124,7 @@ export class Service {
         }
         for (const rel of embeds) {
           const isSingular = inflection.singularize(rel) === rel
-          const fk = isSingular ? item[`${rel}Id`] : item['id']
+          const fk: unknown = isSingular ? item[`${rel}Id`] : item['id']
           const cache = embedCache.get(rel)!
           if (cache.has(fk)) {
             item = { ...item, [rel]: cache.get(fk)! }
