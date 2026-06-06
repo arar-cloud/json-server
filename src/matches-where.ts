@@ -1,6 +1,6 @@
 import type { JsonObject } from 'type-fest'
 
-import { WHERE_OPERATORS, type WhereOperator, getCompiledRegex } from './where-operators.ts'
+import { WHERE_OPERATORS, type WhereOperator, getCompiledRegex, operatorFunctions } from './where-operators.ts'
 
 type OperatorObject = Partial<Record<WhereOperator, unknown>>
 
@@ -50,29 +50,13 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
         if (field === undefined) return false
 
         const op = value as OperatorObject
-        if (knownOps.includes('lt') && !((field as any) < (op.lt as any))) return false
-        if (knownOps.includes('lte') && !((field as any) <= (op.lte as any))) return false
-        if (knownOps.includes('gt') && !((field as any) > (op.gt as any))) return false
-        if (knownOps.includes('gte') && !((field as any) >= (op.gte as any))) return false
-        if (knownOps.includes('eq') && !((field as any) === (op.eq as any))) return false
-        if (knownOps.includes('ne') && !((field as any) !== (op.ne as any))) return false
-        if (knownOps.includes('in')) {
-          const inValues = Array.isArray(op.in) ? op.in : [op.in]
-          if (!inValues.some((v) => (field as any) === (v as any))) return false
-        }
-        if (knownOps.includes('contains')) {
-          if (typeof field !== 'string') return false
-          const pattern = getCompiledRegex(String(op.contains))
-          if (!pattern.test(field.toLowerCase())) return false
-        }
-        if (knownOps.includes('startsWith')) {
-          if (typeof field !== 'string') return false
-          const pattern = getCompiledRegex(`^${String(op.startsWith)}`)
-          if (!pattern.test(field.toLowerCase())) return false
-        }
-        if (knownOps.includes('endsWith')) {
-          if (typeof field !== 'string') return false
-          if (!field.toLowerCase().endsWith(String(op.endsWith).toLowerCase())) return false
+        // Short-circuit evaluation: return false on first failed operator check
+        for (const operatorKey of knownOps) {
+          const operatorFunc = operatorFunctions[operatorKey as keyof typeof operatorFunctions]
+          if (operatorFunc) {
+            const result = (operatorFunc as any)(field, op[operatorKey as keyof OperatorObject])
+            if (!result) return false
+          }
         }
         continue
       }
