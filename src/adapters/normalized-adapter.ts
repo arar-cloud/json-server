@@ -33,6 +33,10 @@ function clone<T>(data: T): T {
 // Memoization cache for denormalized records: WeakMap avoids memory leaks
 const denormCache = new WeakMap<any, any>()
 
+// Lazy field index cache: maps (collection, fieldName) -> Map(fieldValue -> item)
+// Built on-demand to avoid initialization overhead for unused collections
+const fieldIndexCache = new Map<string, Map<string, Map<string, Item>>>()
+
 export const DEFAULT_SCHEMA_PATH = './node_modules/json-server/schema.json'
 export type RawData = Record<string, Item[] | Item | string | undefined> & {
   $schema?: string
