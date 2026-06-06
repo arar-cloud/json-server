@@ -3,6 +3,33 @@ import type { Adapter } from 'lowdb'
 import { randomId } from '../random-id.ts'
 import type { Data, Item } from '../service.ts'
 
+// Copy-on-write proxy factory: wraps data and only clones on mutation
+function createCOWProxy<T extends object>(data: T, cloneFn: (d: T) => T): T {
+  let cloned: T | null = null
+  
+  return new Proxy(data, {
+    get(target, prop) {
+      return Reflect.get(cloned ?? target, prop)
+    },
+    set(target, prop, value) {
+      if (!cloned) {
+        cloned = cloneFn(target)
+      }
+      return Reflect.set(cloned, prop, value)
+    },
+    deleteProperty(target, prop) {
+      if (!cloned) {
+        cloned = cloneFn(target)
+      }
+      return Reflect.deleteProperty(cloned, prop)
+    },
+  })
+}
+
+function clone<T>(data: T): T {
+  return JSON.parse(JSON.stringify(data))
+}
+
 export const DEFAULT_SCHEMA_PATH = './node_modules/json-server/schema.json'
 export type RawData = Record<string, Item[] | Item | string | undefined> & {
   $schema?: string
@@ -38,10 +65,13 @@ export class NormalizedAdapter implements Adapter<Data> {
       }
     }
 
-    return data as Data
+    // Return COW proxy: materialization only on mutation, O(1) proxy creation cost
+    return createCOWProxy(data as Data, clone)
   }
 
   async write(data: Data): Promise<void> {
+    // Spread operator forces materialization of COW proxy before write
+    // If proxy was never mutated, spread still copies shallow refs efficiently
     await this.#adapter.write({ ...data, $schema: DEFAULT_SCHEMA_PATH })
   }
 }
