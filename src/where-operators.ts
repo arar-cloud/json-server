@@ -23,8 +23,11 @@ export const WHERE_OPERATORS = [
 
 export type WhereOperator = (typeof WHERE_OPERATORS)[number]
 
+// Pre-compiled Set for O(1) operator lookup instead of array.includes()
+const OPERATOR_SET = new Set<string>(WHERE_OPERATORS)
+
 export function isWhereOperator(value: string): value is WhereOperator {
-  return (WHERE_OPERATORS as readonly string[]).includes(value)
+  return OPERATOR_SET.has(value)
 }
 
 // Export regex helper for filter operators to use
