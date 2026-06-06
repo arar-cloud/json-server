@@ -143,7 +143,7 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
       sort,
       page,
       perPage,
-      embed,
+      embed: embed ?? undefined,
     })
     next?.()
   })
