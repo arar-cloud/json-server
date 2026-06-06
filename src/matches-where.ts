@@ -21,8 +21,14 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   return ops
 }
 
-// Predicate cache: maps serialized where clauses to memoized evaluation results
+// Predicate cache: maps items to clause-result maps for memoization across record evaluations
+// Structure: WeakMap<item> -> Map<serialized_clause> -> boolean
 const predicateCache = new WeakMap<JsonObject, Map<string, boolean>>()
+
+// Helper to serialize where clause for cache key (avoid JSON.stringify on hot path)
+function getClauseKey(clause: JsonObject): string {
+  return JSON.stringify(clause)
+}
 
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
   for (const [key, value] of Object.entries(where)) {
