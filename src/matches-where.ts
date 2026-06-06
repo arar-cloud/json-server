@@ -31,6 +31,13 @@ function getClauseKey(clause: JsonObject): string {
 }
 
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
+  // Check predicate cache first to avoid re-evaluation
+  let itemCache = predicateCache.get(obj)
+  const clauseKey = getClauseKey(where)
+  if (itemCache?.has(clauseKey)) {
+    return itemCache.get(clauseKey)!
+  }
+
   for (const [key, value] of Object.entries(where)) {
     if (key === 'or') {
       if (!Array.isArray(value) || value.length === 0) return false
@@ -79,5 +86,10 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
     return false
   }
 
+  // Cache the result before returning
+  if (!predicateCache.has(obj)) {
+    predicateCache.set(obj, new Map())
+  }
+  predicateCache.get(obj)!.set(clauseKey, true)
   return true
 }
