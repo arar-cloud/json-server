@@ -69,6 +69,11 @@ export class NormalizedAdapter implements Adapter<Data> {
     return collectionIndexes.get(field)!
   }
 
+  findByField(collection: string, field: string, value: string, items: Item[]): Item | undefined {
+    const index = this.#buildFieldIndex(collection, field, items)
+    return index.get(value)
+  }
+
   async read(): Promise<Data | null> {
     const data = await this.#adapter.read()
 
