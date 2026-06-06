@@ -23,6 +23,12 @@ export const WHERE_OPERATORS = [
   'endsWith',
 ] as const
 
+// Operator implementation map with strict equality to avoid type coercion overhead
+export const operatorFunctions = {
+  eq: (value: any, condition: any) => value === condition,
+  ne: (value: any, condition: any) => value !== condition,
+} as const
+
 export type WhereOperator = (typeof WHERE_OPERATORS)[number]
 
 // Pre-compiled Set for O(1) operator lookup instead of array.includes()
