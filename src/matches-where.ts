@@ -21,10 +21,14 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   return ops
 }
 
+// Predicate cache: maps serialized where clauses to memoized evaluation results
+const predicateCache = new WeakMap<JsonObject, Map<string, boolean>>()
+
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
   for (const [key, value] of Object.entries(where)) {
     if (key === 'or') {
-      if (!Array.isArray(value) || value.length === 0) return false
+      if (!Array.isArray(value) || value.length === 0) result = false
+        break
 
       let matched = false
       for (const subWhere of value) {
