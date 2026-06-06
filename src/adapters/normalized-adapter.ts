@@ -30,6 +30,9 @@ function clone<T>(data: T): T {
   return JSON.parse(JSON.stringify(data))
 }
 
+// Memoization cache for denormalized records: WeakMap avoids memory leaks
+const denormCache = new WeakMap<any, any>()
+
 export const DEFAULT_SCHEMA_PATH = './node_modules/json-server/schema.json'
 export type RawData = Record<string, Item[] | Item | string | undefined> & {
   $schema?: string
@@ -61,6 +64,9 @@ export class NormalizedAdapter implements Adapter<Data> {
           if (item['id'] === undefined) {
             item['id'] = randomId()
           }
+          
+          // Warm memoization cache to avoid redundant traversals on subsequent accesses
+          denormCache.set(item, item)
         }
       }
     }
