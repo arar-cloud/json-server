@@ -58,7 +58,8 @@ function coerceValue(value: string): string | number | boolean | null {
 export function parseWhere(query: string): JsonObject {
   const out: JsonObject = {}
   const params = new URLSearchParams(query)
-  const pathCache = new Map<string, Map<string, any>>()
+  type Op = 'lt' | 'lte' | 'gt' | 'gte' | 'eq' | 'ne' | 'in' | 'contains' | 'startsWith' | 'endsWith'
+  const pathCache = new Map<string, Map<Op, string>>()
 
   for (const [rawKey, rawValue] of params.entries()) {
     const { path, op } = splitKey(rawKey)

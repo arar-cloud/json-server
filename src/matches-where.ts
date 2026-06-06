@@ -27,8 +27,7 @@ const predicateCache = new WeakMap<JsonObject, Map<string, boolean>>()
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
   for (const [key, value] of Object.entries(where)) {
     if (key === 'or') {
-      if (!Array.isArray(value) || value.length === 0) result = false
-        break
+      if (!Array.isArray(value) || value.length === 0) return false
 
       let matched = false
       for (const subWhere of value) {
