@@ -23,6 +23,9 @@ function ensureArray(arg: string | string[] = []): string[] {
 // Cache for computed embed maps: key = "relationName|isSingular|foreignKey"
 const embedMapCache = new Map<string, Map<unknown, Item | Item[]>>()
 
+// Memoization for embed resolution results to avoid redundant field lookups
+const embedResolutionCache = new WeakMap<Record<string, any>, Map<string, any>>()
+
 function embedBatch(db: Low<Data>, items: Item[], related: string, name: string): Map<unknown, Item | Item[]> {
   const resultMap = new Map<unknown, Item | Item[]>()
   const isSingular = inflection.singularize(related) === related
