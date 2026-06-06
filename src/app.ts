@@ -55,16 +55,18 @@ function parseListParams(req: any) {
     }
   }
 
-  let where = parseWhere(new URLSearchParams(filterEntries).toString())
+  // Defer JSON.parse only when rawWhere exists; otherwise parse filter entries
+  let where: any
   if (typeof rawWhere === 'string') {
     try {
-      const parsed = JSON.parse(rawWhere)
-      if (typeof parsed === 'object' && parsed !== null) {
-        where = parsed
-      }
+      where = JSON.parse(rawWhere)
     } catch {
-      // Ignore invalid JSON and fallback to parsed query params
+      // Fallback to filter params if _where is invalid JSON
+      where = parseWhere(new URLSearchParams(filterEntries).toString())
     }
+  } else {
+    // No _where param, parse filter entries directly
+    where = parseWhere(new URLSearchParams(filterEntries).toString())
   }
 
   const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
