@@ -16,11 +16,13 @@ function splitKey(key: string): { path: string; op: WhereOperator | null } {
   }
 
   // Compatibility with v0.17 operator style (e.g. _lt, _gt)
-  const underscoreMatch = key.match(/^(.*)_([a-z]+)$/)
-  if (underscoreMatch) {
-    const path = underscoreMatch[1]
-    const op = underscoreMatch[2]
-    if (path && isWhereOperator(op)) {
+  // Use rightmost underscore search to avoid regex backtracking O(n²) on complex keys
+  const underscoreIdx = key.lastIndexOf('_')
+  if (underscoreIdx > 0) {
+    const path = key.slice(0, underscoreIdx)
+    const op = key.slice(underscoreIdx + 1)
+    // Operator must be lowercase letters only and valid
+    if (op && /^[a-z]+$/.test(op) && isWhereOperator(op)) {
       return { path, op }
     }
   }
