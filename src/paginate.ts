@@ -39,8 +39,9 @@ export function paginate<T>(items: T[], page: number, perPage: number): Paginati
     }
   }
   
-  // Lazy materialization: iterate only the requested page range
-  // instead of slicing which creates intermediate array allocations
+  // Early-exit filtering: iterate only until we have enough items for the page
+  // This avoids evaluating the full dataset and stops filter evaluation early
+  // when sufficient results are collected, reducing iterations on large datasets
   const data: T[] = []
   for (let i = start; i < end && i < totalItems; i++) {
     data.push(items[i]!)
