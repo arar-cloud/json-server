@@ -23,6 +23,7 @@ export function paginate<T>(items: T[], page: number, perPage: number): Paginati
   const last = pages
 
   // Calculate pagination bounds early before materialization
+  // Pre-compute offset math once to avoid recalculation on every item access
   const start = (currentPage - 1) * safePerPage
   const end = start + safePerPage
   
