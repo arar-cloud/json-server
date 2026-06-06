@@ -58,11 +58,23 @@ function coerceValue(value: string): string | number | boolean | null {
 export function parseWhere(query: string): JsonObject {
   const out: JsonObject = {}
   const params = new URLSearchParams(query)
+  const pathCache = new Map<string, Map<string, any>>()
 
   for (const [rawKey, rawValue] of params.entries()) {
     const { path, op } = splitKey(rawKey)
     if (op === null) continue
-    setPathOp(out, path, op, rawValue)
+
+    if (!pathCache.has(path)) {
+      pathCache.set(path, new Map())
+    }
+    const opMap = pathCache.get(path)!
+    opMap.set(op, rawValue)
+  }
+
+  for (const [path, opMap] of pathCache.entries()) {
+    for (const [op, rawValue] of opMap.entries()) {
+      setPathOp(out, path, op, rawValue)
+    }
   }
 
   return out
