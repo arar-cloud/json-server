@@ -1,6 +1,6 @@
 import type { JsonObject } from 'type-fest'
 
-import { WHERE_OPERATORS, type WhereOperator } from './where-operators.ts'
+import { WHERE_OPERATORS, type WhereOperator, getCompiledRegex } from './where-operators.ts'
 
 type OperatorObject = Partial<Record<WhereOperator, unknown>>
 
@@ -62,11 +62,13 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
         }
         if (knownOps.includes('contains')) {
           if (typeof field !== 'string') return false
-          if (!field.toLowerCase().includes(String(op.contains).toLowerCase())) return false
+          const pattern = getCompiledRegex(String(op.contains))
+          if (!pattern.test(field.toLowerCase())) return false
         }
         if (knownOps.includes('startsWith')) {
           if (typeof field !== 'string') return false
-          if (!field.toLowerCase().startsWith(String(op.startsWith).toLowerCase())) return false
+          const pattern = getCompiledRegex(`^${String(op.startsWith)}`)
+          if (!pattern.test(field.toLowerCase())) return false
         }
         if (knownOps.includes('endsWith')) {
           if (typeof field !== 'string') return false
