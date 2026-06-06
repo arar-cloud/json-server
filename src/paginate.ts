@@ -22,9 +22,25 @@ export function paginate<T>(items: T[], page: number, perPage: number): Paginati
   const next = currentPage < pages ? currentPage + 1 : null
   const last = pages
 
+  // Calculate pagination bounds early before materialization
   const start = (currentPage - 1) * safePerPage
   const end = start + safePerPage
-  const data = items.slice(start, end)
+  
+  // Early exit if pagination is out of bounds to avoid unnecessary slice
+  if (start >= totalItems) {
+    return {
+      first,
+      prev,
+      next,
+      last,
+      pages,
+      items: totalItems,
+      data: [],
+    }
+  }
+  
+  // Single bounded slice operation reduces memory pressure
+  const data = items.slice(start, Math.min(end, totalItems))
 
   return {
     first,
