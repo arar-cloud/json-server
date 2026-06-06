@@ -49,6 +49,26 @@ export class NormalizedAdapter implements Adapter<Data> {
     this.#adapter = adapter
   }
 
+  #buildFieldIndex(collection: string, field: string, items: Item[]): Map<string, Item> {
+    const cacheKey = `${collection}|${field}`
+    let collectionIndexes = fieldIndexCache.get(collection)
+    if (!collectionIndexes) {
+      collectionIndexes = new Map()
+      fieldIndexCache.set(collection, collectionIndexes)
+    }
+
+    if (!collectionIndexes.has(field)) {
+      const index = new Map<string, Item>()
+      for (const item of items) {
+        const value = String(item[field])
+        index.set(value, item)
+      }
+      collectionIndexes.set(field, index)
+    }
+
+    return collectionIndexes.get(field)!
+  }
+
   async read(): Promise<Data | null> {
     const data = await this.#adapter.read()
 
