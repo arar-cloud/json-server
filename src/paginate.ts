@@ -39,8 +39,12 @@ export function paginate<T>(items: T[], page: number, perPage: number): Paginati
     }
   }
   
-  // Single bounded slice operation reduces memory pressure
-  const data = items.slice(start, Math.min(end, totalItems))
+  // Lazy materialization: iterate only the requested page range
+  // instead of slicing which creates intermediate array allocations
+  const data: T[] = []
+  for (let i = start; i < end && i < totalItems; i++) {
+    data.push(items[i]!)
+  }
 
   return {
     first,
