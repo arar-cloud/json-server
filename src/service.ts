@@ -20,6 +20,9 @@ function ensureArray(arg: string | string[] = []): string[] {
   return Array.isArray(arg) ? arg : [arg]
 }
 
+// Cache for computed embed maps: key = "relationName|isSingular|foreignKey"
+const embedMapCache = new Map<string, Map<unknown, Item | Item[]>>()
+
 function embedBatch(db: Low<Data>, items: Item[], related: string, name: string): Map<unknown, Item | Item[]> {
   const resultMap = new Map<unknown, Item | Item[]>()
   const isSingular = inflection.singularize(related) === related
@@ -29,6 +32,12 @@ function embedBatch(db: Low<Data>, items: Item[], related: string, name: string)
 
   if (!Array.isArray(relatedData)) {
     return resultMap
+  }
+
+  // Check cache before computing
+  const cacheKey = `${related}|${isSingular}|${name}`
+  if (embedMapCache.has(cacheKey)) {
+    return embedMapCache.get(cacheKey)!
   }
 
   if (isSingular) {
@@ -61,6 +70,9 @@ function embedBatch(db: Low<Data>, items: Item[], related: string, name: string)
       }
     }
   }
+  
+  // Store in cache before returning
+  embedMapCache.set(cacheKey, resultMap)
   return resultMap
 }
 
