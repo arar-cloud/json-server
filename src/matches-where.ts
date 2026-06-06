@@ -81,12 +81,24 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
       continue
     }
 
-    if (field === undefined) return false
+    if (field === undefined) {
+      // Cache negative result before returning
+      if (!predicateCache.has(obj)) {
+        predicateCache.set(obj, new Map())
+      }
+      predicateCache.get(obj)!.set(clauseKey, false)
+      return false
+    }
 
+    // Cache negative result before returning
+    if (!predicateCache.has(obj)) {
+      predicateCache.set(obj, new Map())
+    }
+    predicateCache.get(obj)!.set(clauseKey, false)
     return false
   }
 
-  // Cache the result before returning
+  // Cache positive result before returning
   if (!predicateCache.has(obj)) {
     predicateCache.set(obj, new Map())
   }
