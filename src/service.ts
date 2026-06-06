@@ -187,7 +187,15 @@ export class Service {
       })
     }
 
-    results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
+    // Memoize where clause evaluation to avoid redundant operator checks per item
+    const matchCache = new Map<Item, boolean>()
+    results = results.filter((item) => {
+      if (!matchCache.has(item)) {
+        matchCache.set(item, matchesWhere(item as JsonObject, opts.where))
+      }
+      return matchCache.get(item)!
+    })
+    
     if (opts.sort) {
       results = sortOn(results, opts.sort.split(','))
     }
