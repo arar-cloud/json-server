@@ -3,6 +3,8 @@ import type { Adapter } from 'lowdb'
 // Lowdb adapter to observe read/write events
 export class Observer<T> {
   #adapter: Adapter<T>
+  #writeBuffer: Array<() => void> = []
+  #isProcessingBatch = false
 
   onReadStart = function () {
     return
@@ -31,6 +33,24 @@ export class Observer<T> {
   async write(arg: T) {
     this.onWriteStart()
     await this.#adapter.write(arg)
-    this.onWriteEnd()
+    
+    // Buffer write notifications to coalesce rapid successive writes
+    this.#writeBuffer.push(() => this.onWriteEnd())
+    
+    if (!this.#isProcessingBatch) {
+      this.#isProcessingBatch = true
+      // Defer batch emission to next microtask
+      await Promise.resolve()
+      this.#flushWriteBuffer()
+    }
+  }
+  
+  #flushWriteBuffer() {
+    // Emit all buffered write notifications and clear buffer
+    while (this.#writeBuffer.length > 0) {
+      const callback = this.#writeBuffer.shift()
+      callback?.()
+    }
+    this.#isProcessingBatch = false
   }
 }
