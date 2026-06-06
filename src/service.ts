@@ -200,6 +200,7 @@ export class Service {
   }
 
   async create(name: string, data: Omit<Item, 'id'> = {}): Promise<Item | undefined> {
+    embedMapCache.clear()
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
 
@@ -261,6 +262,7 @@ export class Service {
     id: string,
     dependent?: string | string[],
   ): Promise<Item | undefined> {
+    embedMapCache.clear()
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
 
