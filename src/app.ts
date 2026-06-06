@@ -31,15 +31,31 @@ function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
   const params = new URLSearchParams(queryString)
 
-  const filterParams = new URLSearchParams()
+  // Single-pass iteration to extract filter params and reserved keys
+  const filterEntries: [string, string][] = []
+  let rawWhere: string | null = null
+  let sort: string | null = null
+  let pageRaw: string | null = null
+  let perPageRaw: string | null = null
+  let embed: string | null = null
+
   for (const [key, value] of params.entries()) {
-    if (!RESERVED_QUERY_KEYS.has(key)) {
-      filterParams.append(key, value)
+    if (key === '_where') {
+      rawWhere = value
+    } else if (key === '_sort') {
+      sort = value
+    } else if (key === '_page') {
+      pageRaw = value
+    } else if (key === '_per_page') {
+      perPageRaw = value
+    } else if (key === '_embed') {
+      embed = value
+    } else if (!RESERVED_QUERY_KEYS.has(key)) {
+      filterEntries.push([key, value])
     }
   }
 
-  let where = parseWhere(filterParams.toString())
-  const rawWhere = params.get('_where')
+  let where = parseWhere(new URLSearchParams(filterEntries).toString())
   if (typeof rawWhere === 'string') {
     try {
       const parsed = JSON.parse(rawWhere)
@@ -51,17 +67,15 @@ function parseListParams(req: any) {
     }
   }
 
-  const pageRaw = params.get('_page')
-  const perPageRaw = params.get('_per_page')
   const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
   const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
 
   return {
     where,
-    sort: params.get('_sort') ?? undefined,
+    sort: sort ?? undefined,
     page: Number.isNaN(page) ? undefined : page,
     perPage: Number.isNaN(perPage) ? undefined : perPage,
-    embed: req.query['_embed'],
+    embed,
   }
 }
 
