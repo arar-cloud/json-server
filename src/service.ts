@@ -20,30 +20,48 @@ function ensureArray(arg: string | string[] = []): string[] {
   return Array.isArray(arg) ? arg : [arg]
 }
 
-function embed(db: Low<Data>, name: string, item: Item, related: string): Item {
-  if (inflection.singularize(related) === related) {
-    const relatedData = db.data[inflection.pluralize(related)] as Item[]
-    if (!relatedData) {
-      return item
+function embedBatch(db: Low<Data>, items: Item[], related: string, name: string): Map<unknown, Item | Item[]> {
+  const resultMap = new Map<unknown, Item | Item[]>()
+  const isSingular = inflection.singularize(related) === related
+  const relatedData = isSingular 
+    ? db.data[inflection.pluralize(related)] as Item[]
+    : db.data[related] as Item[]
+
+  if (!Array.isArray(relatedData)) {
+    return resultMap
+  }
+
+  if (isSingular) {
+    // For singular relations: build map indexed by id for O(1) lookup
+    const indexById = new Map<unknown, Item>()
+    for (const relItem of relatedData) {
+      indexById.set(relItem['id'], relItem)
     }
-    const foreignKey = `${related}Id`
-    const relatedItem = relatedData.find((relatedItem: Item) => {
-      return relatedItem['id'] === item[foreignKey]
-    })
-    return { ...item, [related]: relatedItem }
+    for (const item of items) {
+      const fk = item[`${related}Id`]
+      if (fk !== undefined && indexById.has(fk)) {
+        resultMap.set(fk, indexById.get(fk)!)
+      }
+    }
+  } else {
+    // For plural relations: build map indexed by foreign key
+    const indexByKey = new Map<unknown, Item[]>()
+    const foreignKey = `${inflection.singularize(name)}Id`
+    for (const relItem of relatedData) {
+      const key = relItem[foreignKey]
+      if (!indexByKey.has(key)) {
+        indexByKey.set(key, [])
+      }
+      indexByKey.get(key)!.push(relItem)
+    }
+    for (const item of items) {
+      const id = item['id']
+      if (id !== undefined && indexByKey.has(id)) {
+        resultMap.set(id, indexByKey.get(id)!)
+      }
+    }
   }
-  const relatedData: Item[] = db.data[related] as Item[]
-
-  if (!relatedData) {
-    return item
-  }
-
-  const foreignKey = `${inflection.singularize(name)}Id`
-  const relatedItems = relatedData.filter(
-    (relatedItem: Item) => relatedItem[foreignKey] === item['id'],
-  )
-
-  return { ...item, [related]: relatedItems }
+  return resultMap
 }
 
 function nullifyForeignKey(db: Low<Data>, name: string, id: string) {
@@ -98,9 +116,21 @@ export class Service {
 
     if (Array.isArray(value)) {
       let item = value.find((item) => item['id'] === id)
-      ensureArray(query._embed).forEach((related) => {
-        if (item !== undefined) item = embed(this.#db, name, item, related)
-      })
+      const embeds = ensureArray(query._embed)
+      if (item && embeds.length > 0) {
+        const embedCache = new Map<string, Map<unknown, Item | Item[]>>()
+        for (const rel of embeds) {
+          embedCache.set(rel, embedBatch(this.#db, [item], rel, name))
+        }
+        for (const rel of embeds) {
+          const isSingular = inflection.singularize(rel) === rel
+          const fk = isSingular ? item[`${rel}Id`] : item['id']
+          const cache = embedCache.get(rel)!
+          if (cache.has(fk)) {
+            item = { ...item, [rel]: cache.get(fk)! }
+          }
+        }
+      }
       return item
     }
 
@@ -125,10 +155,25 @@ export class Service {
 
     let results = items
 
-    // Include
-    ensureArray(opts.embed).forEach((related) => {
-      results = results.map((item) => embed(this.#db, name, item, related))
-    })
+    // Batch resolve all embeds for O(n) instead of O(n²) complexity
+    const embeds = ensureArray(opts.embed)
+    if (embeds.length > 0) {
+      const embedCache = new Map<string, Map<unknown, Item | Item[]>>()
+      for (const rel of embeds) {
+        embedCache.set(rel, embedBatch(this.#db, results, rel, name))
+      }
+      results = results.map((item) => {
+        for (const rel of embeds) {
+          const isSingular = inflection.singularize(rel) === rel
+          const fk = isSingular ? item[`${rel}Id`] : item['id']
+          const cache = embedCache.get(rel)!
+          if (cache.has(fk)) {
+            item = { ...item, [rel]: cache.get(fk)! }
+          }
+        }
+        return item
+      })
+    }
 
     results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
     if (opts.sort) {
