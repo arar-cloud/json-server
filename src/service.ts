@@ -222,6 +222,14 @@ export class Service {
     return nextItem
   }
 
+  async destroyAll(name: string): Promise<void> {
+    embedMapCache.clear()
+    const items = this.#get(name)
+    if (items === undefined || !Array.isArray(items)) return
+    items.length = 0
+    await this.#db.write()
+  }
+
   async #updateOrPatchById(
     name: string,
     id: string,
