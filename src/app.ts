@@ -44,6 +44,18 @@ const eta = new Eta({
   cache: isProduction,
 })
 
+function asyncHandler(fn: (req: any, res: any, next?: any) => Promise<void>): (req: any, res: any, next?: any) => void {
+  return (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch((error) => {
+      console.error('Async route error:', error)
+      if (!res.headersSent) {
+        res.status(500)
+        res.json({ error: 'Internal server error' })
+      }
+    })
+  }
+}
+
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
 
 const MAX_PAGE = 1_000_000
