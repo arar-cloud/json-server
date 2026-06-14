@@ -24,14 +24,35 @@ export class NormalizedAdapter implements Adapter<Data> {
 
     delete data['$schema']
 
-    for (const value of Object.values(data)) {
+    for (const [key, value] of Object.entries(data)) {
+      // Reject suspicious keys
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+        console.warn('[security] Rejected malicious key in normalized data:', key)
+        continue
+      }
+
       if (Array.isArray(value)) {
         for (const item of value) {
-          if (typeof item['id'] === 'number') {
-            item['id'] = item['id'].toString()
-          }
-
-          if (item['id'] === undefined) {
+          if (typeof item !== 'object' || item === null) continue
+          
+          // Strict ID type coercion
+          if (Object.prototype.hasOwnProperty.call(item, 'id')) {
+            const id = item['id']
+            if (typeof id === 'number') {
+              // Only coerce safe integers
+              if (Number.isSafeInteger(id) && id >= 0) {
+                item['id'] = String(id)
+              } else {
+                console.warn('[security] ID out of safe range, regenerating')
+                item['id'] = randomId()
+              }
+            } else if (typeof id === 'string' && id.length === 0) {
+              item['id'] = randomId()
+            } else if (typeof id !== 'string') {
+              console.warn('[security] Invalid ID type, regenerating')
+              item['id'] = randomId()
+            }
+          } else {
             item['id'] = randomId()
           }
         }
