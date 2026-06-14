@@ -66,8 +66,24 @@ export class Observer<T> {
   }
 
   async write(arg: T) {
+    // Validate data before write
+    if (arg === null || arg === undefined) {
+      console.warn('[security] Observer detected null/undefined write attempt')
+      throw new Error('Cannot write null or undefined data')
+    }
+    
+    if (typeof arg === 'object' && Object.keys(arg).length === 0) {
+      console.warn('[security] Observer detected empty object write')
+    }
+    
     this.onWriteStart()
-    await this.#adapter.write(arg)
-    this.onWriteEnd()
+    try {
+      await this.#adapter.write(arg)
+      this.onWriteEnd()
+    } catch (error) {
+      console.warn('[security] Observer write failed:', error)
+      this.onWriteEnd()
+      throw error
+    }
   }
 }
