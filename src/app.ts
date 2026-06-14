@@ -228,6 +228,26 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     }
     next && next()
   })
+  
+  // Apply JSON parser with size limit configuration
+  app.use((req, res, next) => {
+    // Track accumulated body size to prevent streaming bypasses
+    let bodySize = 0
+    const originalWrite = res.write
+    const originalEnd = res.end
+    
+    req.on('data', (chunk: Buffer) => {
+      bodySize += chunk.length
+      if (bodySize > MAX_BODY_SIZE) {
+        console.warn('[security] Request body streaming exceeds size limit')
+        req.pause()
+        res.status(413).json({ error: 'Payload too large' })
+      }
+    })
+    
+    next && next()
+  })
+  
   app.use(json())
 
   // Authentication middleware (configurable via AUTH_ENABLED env var)
