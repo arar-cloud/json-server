@@ -43,11 +43,12 @@ function parseListParams(req: any) {
   if (typeof rawWhere === 'string') {
     try {
       const parsed = JSON.parse(rawWhere)
-      if (typeof parsed === 'object' && parsed !== null) {
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
         where = parsed
       }
-    } catch {
-      // Ignore invalid JSON and fallback to parsed query params
+    } catch (err) {
+      // Log and reject malformed JSON
+      console.warn('[security] Malformed _where parameter:', rawWhere)
     }
   }
 
