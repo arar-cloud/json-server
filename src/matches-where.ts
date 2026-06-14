@@ -66,7 +66,8 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
       const knownOps = getKnownOperators(value)
 
       if (knownOps.length > 0) {
-        if (field === undefined) return false
+        // Safe null/undefined handling with null coalescing
+        if (field === undefined && !knownOps.includes('ne') && !knownOps.includes('in')) return false
 
         const op = value as OperatorObject
         if (knownOps.includes('lt') && !((field as any) < (op.lt as any))) return false
