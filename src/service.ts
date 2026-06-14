@@ -20,7 +20,23 @@ function ensureArray(arg: string | string[] = []): string[] {
   return Array.isArray(arg) ? arg : [arg]
 }
 
-function embed(db: Low<Data>, name: string, item: Item, related: string): Item {
+function embed(db: Low<Data>, name: string, item: Item, related: string, depth: number = 0, visitedIds: Set<string | number> = new Set()): Item {
+  // Prevent circular embedding and deep nesting
+  const MAX_EMBED_DEPTH = 10
+  if (depth > MAX_EMBED_DEPTH) {
+    return item
+  }
+
+  // Check for self-reference or circular reference
+  const itemId = item.id
+  if (itemId && visitedIds.has(itemId)) {
+    return item // Already embedded this item, stop to prevent infinite loop
+  }
+  if (itemId) {
+    visitedIds = new Set(visitedIds)
+    visitedIds.add(itemId)
+  }
+
   if (inflection.singularize(related) === related) {
     const relatedData = db.data[inflection.pluralize(related)] as Item[]
     if (!relatedData) {
@@ -28,7 +44,7 @@ function embed(db: Low<Data>, name: string, item: Item, related: string): Item {
     }
     const foreignKey = `${related}Id`
     const relatedItem = relatedData.find((relatedItem: Item) => {
-      return relatedItem && relatedItem['id'] === item[foreignKey]
+      return relatedItem && relatedItem['id'] === item[foreignKey] && !visitedIds.has(relatedItem['id'])
     })
     return { ...item, [related]: relatedItem || undefined }
   }
@@ -40,7 +56,7 @@ function embed(db: Low<Data>, name: string, item: Item, related: string): Item {
 
   const foreignKey = `${inflection.singularize(name)}Id`
   const relatedItems = relatedData.filter(
-    (relatedItem: Item) => relatedItem && relatedItem[foreignKey] === item['id'],
+    (relatedItem: Item) => relatedItem && relatedItem[foreignKey] === item['id'] && !visitedIds.has(relatedItem['id']),
   )
 
   return { ...item, [related]: relatedItems }
@@ -99,7 +115,7 @@ export class Service {
     if (Array.isArray(value)) {
       let item = value.find((item) => item['id'] === id)
       ensureArray(query._embed).forEach((related) => {
-        if (item !== undefined) item = embed(this.#db, name, item, related)
+        if (item !== undefined) item = embed(this.#db, name, item, related, 0, new Set())
       })
       return item
     }
