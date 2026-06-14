@@ -139,10 +139,30 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   // Create app
   const app = new App()
 
-  // Static files
-  app.use(sirv('public', { dev: !isProduction }))
+  // Static files with path traversal protection
+  function validateStaticDir(dir: string): boolean {
+    try {
+      // Resolve to absolute path
+      const resolved = isAbsolute(dir) ? dir : join(process.cwd(), dir)
+      // Reject if path attempts to traverse outside cwd
+      const relative = require('path').relative(process.cwd(), resolved)
+      if (relative.startsWith('..')) {
+        console.warn('[security] Static dir path traversal attempt:', dir)
+        return false
+      }
+      return true
+    } catch (err) {
+      console.warn('[security] Invalid static dir:', dir, err)
+      return false
+    }
+  }
+
+  if (validateStaticDir('public')) {
+    app.use(sirv('public', { dev: !isProduction }))
+  }
   options.static
     ?.map((path) => (isAbsolute(path) ? path : join(process.cwd(), path)))
+    .filter((dir) => validateStaticDir(dir))
     .forEach((dir) => app.use(sirv(dir, { dev: !isProduction })))
 
   // CORS
