@@ -38,7 +38,29 @@ export class NormalizedAdapter implements Adapter<Data> {
       }
     }
 
+    // Validate referential integrity
+    this.validateIntegrity(data)
     return data as Data
+  }
+
+  private validateIntegrity(data: RawData): void {
+    // Check for circular references at top level (prevent infinite loops)
+    const seen = new WeakSet<object>()
+    const validate = (obj: unknown, depth = 0): void => {
+      if (depth > 100) {
+        throw new Error('[security] Circular reference or excessive nesting detected')
+      }
+      if (obj && typeof obj === 'object') {
+        if (seen.has(obj)) {
+          throw new Error('[security] Circular reference detected')
+        }
+        seen.add(obj)
+        for (const value of Object.values(obj)) {
+          validate(value, depth + 1)
+        }
+      }
+    }
+    validate(data)
   }
 
   async write(data: Data): Promise<void> {
