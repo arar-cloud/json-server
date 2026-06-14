@@ -54,8 +54,21 @@ function parseListParams(req: any) {
 
   const pageRaw = params.get('_page')
   const perPageRaw = params.get('_per_page')
-  const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
-  const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
+  // Parse with radix 10 and validate ranges to prevent DoS via memory exhaustion
+  let page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
+  let perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
+
+  // Validate bounds: min page 1, max 1M; min perPage 1, max 10k
+  if (typeof page === 'number' && !Number.isNaN(page)) {
+    if (page < 1 || page > 1000000) {
+      page = undefined
+    }
+  }
+  if (typeof perPage === 'number' && !Number.isNaN(perPage)) {
+    if (perPage < 1 || perPage > 10000) {
+      perPage = undefined
+    }
+  }
 
   return {
     where,
