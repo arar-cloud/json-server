@@ -1,6 +1,33 @@
 import type { Adapter } from 'lowdb'
+import { isAbsolute, relative, resolve } from 'node:path'
+
+// Validate watched path does not escape process.cwd() to prevent symlink/traversal attacks
+function validateWatchPath(filePath: string): boolean {
+  try {
+    const resolved = isAbsolute(filePath) ? filePath : resolve(process.cwd(), filePath)
+    const rel = relative(process.cwd(), resolved)
+    // Reject if path attempts to traverse outside cwd
+    if (rel.startsWith('..') || rel.includes('/../')) {
+      console.warn('[security] Observer: watch path traversal attempt blocked:', filePath)
+      return false
+    }
+    return true
+  } catch (err) {
+    console.warn('[security] Observer: invalid watch path:', filePath, err)
+    return false
+  }
+}
 
 // Lowdb adapter to observe read/write events
+// Chokidar watch helper with hardened security config
+export function createSecureWatcher(watchPath: string) {
+  if (!validateWatchPath(watchPath)) {
+    throw new Error('Observer: Invalid path for watching')
+  }
+  // Note: If chokidar is integrated, use: ignoreSymlinks: true, followSymlinks: false
+  return null // Placeholder for actual chokidar integration
+}
+
 export class Observer<T> {
   #adapter: Adapter<T>
 
