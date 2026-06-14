@@ -23,14 +23,24 @@ export class Observer<T> {
 
   async read() {
     this.onReadStart()
-    const data = await this.#adapter.read()
-    this.onReadEnd(data)
-    return data
+    try {
+      const data = await this.#adapter.read()
+      this.onReadEnd(data)
+      return data
+    } catch (error) {
+      console.error('Observer read error:', error)
+      throw error
+    }
   }
 
   async write(arg: T) {
     this.onWriteStart()
-    await this.#adapter.write(arg)
-    this.onWriteEnd()
+    try {
+      await this.#adapter.write(arg)
+      this.onWriteEnd()
+    } catch (error) {
+      console.error('Observer write error:', error)
+      throw error
+    }
   }
 }
