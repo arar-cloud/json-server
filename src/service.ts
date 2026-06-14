@@ -24,6 +24,35 @@ export type Item = Record<string, unknown>
 
 export type Data = Record<string, Item[] | Item>
 
+// Validate resource name to prevent path traversal and injection attacks
+function validateResourceName(name: string): boolean {
+  if (typeof name !== 'string' || name.length === 0 || name.length > 255) {
+    return false
+  }
+  // Reject path traversal sequences, special characters, and suspicious patterns
+  if (name.includes('..') || name.includes('/') || name.includes('\\')) {
+    return false
+  }
+  if (name.startsWith('.') || name.startsWith('_')) {
+    return false
+  }
+  // Only allow alphanumeric, underscore, and hyphen
+  return /^[a-zA-Z0-9_-]+$/.test(name)
+}
+
+// Validate resource ID to prevent injection attacks
+function validateResourceId(id: string): boolean {
+  if (typeof id !== 'string' || id.length === 0 || id.length > 255) {
+    return false
+  }
+  // Reject path traversal and special characters
+  if (id.includes('..') || id.includes('/') || id.includes('\\')) {
+    return false
+  }
+  // Allow alphanumeric, hyphen, underscore
+  return /^[a-zA-Z0-9_-]+$/.test(id)
+}
+
 export function isItem(obj: unknown): obj is Item {
   return typeof obj === 'object' && obj !== null && !Array.isArray(obj)
 }
@@ -162,6 +191,11 @@ export class Service {
   }
 
   findById(name: string, id: string, query: { _embed?: string[] | string }): Item | undefined {
+    if (!validateResourceName(name) || !validateResourceId(id)) {
+      console.warn('[security] Invalid resource name or ID:', name, id)
+      auditLog('findById_blocked', name, id, { reason: 'invalid_identifier' })
+      return undefined
+    }
     const value = this.#get(name)
 
     if (Array.isArray(value)) {
@@ -185,6 +219,11 @@ export class Service {
       embed?: string | string[]
     },
   ): Item[] | PaginatedItems | Item | undefined {
+    if (!validateResourceName(name)) {
+      console.warn('[security] Invalid resource name:', name)
+      auditLog('find_blocked', name, undefined, { reason: 'invalid_resource_name' })
+      return []
+    }
     const items = this.#get(name)
 
     if (!Array.isArray(items)) {
@@ -211,6 +250,11 @@ export class Service {
   }
 
   async create(name: string, data: Omit<Item, 'id'> = {}): Promise<Item | undefined> {
+    if (!validateResourceName(name)) {
+      console.warn('[security] Invalid resource name for create:', name)
+      auditLog('create_blocked', name, undefined, { reason: 'invalid_resource_name' })
+      throw new Error('Invalid resource name')
+    }
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
 
@@ -240,6 +284,11 @@ export class Service {
     body: Item = {},
     isPatch: boolean,
   ): Promise<Item | undefined> {
+    if (!validateResourceName(name) || !validateResourceId(id)) {
+      console.warn('[security] Invalid resource name or ID for update:', name, id)
+      auditLog('updateById_blocked', name, id, { reason: 'invalid_identifier' })
+      throw new Error('Invalid resource identifier')
+    }
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
 
@@ -277,6 +326,11 @@ export class Service {
     id: string,
     dependent?: string | string[],
   ): Promise<Item | undefined> {
+    if (!validateResourceName(name) || !validateResourceId(id)) {
+      console.warn('[security] Invalid resource name or ID for destroy:', name, id)
+      auditLog('destroyById_blocked', name, id, { reason: 'invalid_identifier' })
+      throw new Error('Invalid resource identifier')
+    }
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
 
