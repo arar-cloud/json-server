@@ -13,6 +13,44 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
+// WHERE clause security limits
+const MAX_WHERE_DEPTH = 10 // Max nesting depth
+const MAX_WHERE_KEYS = 100 // Max keys in WHERE object
+const MAX_WHERE_KEY_LENGTH = 255 // Max length of property name
+
+// Validate WHERE clause structure to prevent DoS
+function validateWhereStructure(obj: any, depth = 0): boolean {
+  // Check depth limit
+  if (depth > MAX_WHERE_DEPTH) {
+    console.warn('[security] WHERE clause exceeds max depth:', depth)
+    return false
+  }
+  
+  // Check object key cardinality
+  if (typeof obj === 'object' && obj !== null && !Array.isArray(obj)) {
+    const keys = Object.keys(obj)
+    if (keys.length > MAX_WHERE_KEYS) {
+      console.warn('[security] WHERE clause exceeds max keys:', keys.length)
+      return false
+    }
+    
+    // Validate key names and recursively check values
+    for (const key of keys) {
+      if (typeof key !== 'string' || key.length > MAX_WHERE_KEY_LENGTH) {
+        return false
+      }
+      const value = obj[key]
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        if (!validateWhereStructure(value, depth + 1)) {
+          return false
+        }
+      }
+    }
+  }
+  
+  return true
+}
+
 // Allowed operators for filtering - explicit allowlist to prevent bypass
 const ALLOWED_OPERATORS = new Set<WhereOperator>(['eq', 'lt', 'lte', 'gt', 'gte', 'ne', 'in', 'contains', 'startsWith', 'endsWith'])
 
@@ -90,6 +128,12 @@ export function parseWhere(query: string): JsonObject {
     const { path, op } = splitKey(rawKey)
     if (op === null) continue
     setPathOp(out, path, op, rawValue)
+  }
+
+  // Validate final WHERE structure before returning
+  if (!validateWhereStructure(out)) {
+    console.warn('[security] WHERE clause failed validation')
+    return {}
   }
 
   return out
