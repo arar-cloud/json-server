@@ -4,12 +4,16 @@ import type { JsonObject } from 'type-fest'
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
+  if (!key || typeof key !== 'string' || key.length === 0) {
+    return { path: key, op: null }
+  }
+
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
     const path = key.slice(0, colonIdx)
     const op = key.slice(colonIdx + 1)
-    if (!op) {
-      return { path: key, op: 'eq' }
+    if (!op || !path) {
+      return { path: key, op: null }
     }
 
     return isWhereOperator(op) ? { path, op } : { path, op: null }
