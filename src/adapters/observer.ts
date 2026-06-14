@@ -1,3 +1,33 @@
+// Debounce and race protection helpers
+let debounceTimer: NodeJS.Timeout | null = null
+let isReloading = false
+const DEBOUNCE_DELAY_MS = 300
+
+async function debouncedReload(reloadFn: () => Promise<void>): Promise<void> {
+  if (debounceTimer) clearTimeout(debounceTimer)
+
+  return new Promise((resolve, reject) => {
+    debounceTimer = setTimeout(async () => {
+      if (isReloading) {
+        console.debug('Reload already in progress, skipping duplicate')
+        resolve()
+        return
+      }
+
+      isReloading = true
+      try {
+        await reloadFn()
+        resolve()
+      } catch (error) {
+        console.error('Reload failed:', error instanceof Error ? error.message : error)
+        reject(error)
+      } finally {
+        isReloading = false
+      }
+    }, DEBOUNCE_DELAY_MS)
+  })
+}
+
 import type { Adapter } from 'lowdb'
 
 // Lowdb adapter to observe read/write events
