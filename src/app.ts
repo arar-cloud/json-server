@@ -25,6 +25,11 @@ const eta = new Eta({
   cache: isProduction,
 })
 
+// Simple in-memory rate limiter (per IP)
+const RATE_LIMIT_WINDOW_MS = 60000 // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 1000 // Requests per window
+const requestCounts = new Map<string, { count: number; resetTime: number }>()
+
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
 const MAX_WHERE_JSON_SIZE = 10000 // 10KB limit
 const MAX_QUERY_STRING_SIZE = 20000 // 20KB limit
@@ -165,6 +170,37 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     ?.map((path) => (isAbsolute(path) ? path : join(process.cwd(), path)))
     .filter((dir) => validateStaticDir(dir))
     .forEach((dir) => app.use(sirv(dir, { dev: !isProduction })))
+
+  // Rate limiting middleware
+  app.use((req, res, next) => {
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown'
+    const now = Date.now()
+    
+    let limiter = requestCounts.get(clientIp)
+    if (!limiter || now > limiter.resetTime) {
+      limiter = { count: 0, resetTime: now + RATE_LIMIT_WINDOW_MS }
+      requestCounts.set(clientIp, limiter)
+    }
+    
+    limiter.count++
+    
+    if (limiter.count > RATE_LIMIT_MAX_REQUESTS) {
+      console.warn('[security] Rate limit exceeded for IP:', clientIp)
+      res.setHeader('Retry-After', Math.ceil((limiter.resetTime - now) / 1000))
+      return res.status(429).json({ error: 'Too many requests' })
+    }
+    
+    // Cleanup old entries periodically
+    if (requestCounts.size > 10000) {
+      for (const [ip, data] of requestCounts.entries()) {
+        if (now > data.resetTime) {
+          requestCounts.delete(ip)
+        }
+      }
+    }
+    
+    next && next()
+  })
 
   // CORS
   // Strict CORS configuration: validate origin against allowlist
