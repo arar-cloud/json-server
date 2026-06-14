@@ -12,6 +12,7 @@ import { DataFile, JSONFile } from "lowdb/node";
 import type { PackageJson } from "type-fest";
 
 import { fileURLToPath } from "node:url";
+import path from "node:path";
 import { NormalizedAdapter } from "./adapters/normalized-adapter.ts";
 import type { RawData } from "./adapters/normalized-adapter.ts";
 import { Observer } from "./adapters/observer.ts";
@@ -113,6 +114,22 @@ function args(): {
 }
 
 const { file, port, host, static: staticArr } = args();
+
+// Validate and canonicalize file path to prevent directory traversal
+if (file) {
+  try {
+    const resolvedPath = path.resolve(process.cwd(), file);
+    const baseDir = path.resolve(process.cwd());
+    // Ensure resolved path is within current working directory
+    if (!resolvedPath.startsWith(baseDir + path.sep) && resolvedPath !== baseDir) {
+      console.log(chalk.red("[security] Path traversal attempt detected: " + file));
+      process.exit(1);
+    }
+  } catch (err) {
+    console.log(chalk.red("[security] Invalid file path: " + file));
+    process.exit(1);
+  }
+}
 
 if (!existsSync(file)) {
   console.log(chalk.red(`File ${file} not found`));
