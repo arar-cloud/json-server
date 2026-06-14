@@ -31,12 +31,37 @@ export class Observer<T> {
         if (proto !== null && proto !== Object.prototype && proto !== Array.prototype) {
           throw new Error('[security] Invalid data structure from adapter')
         }
+        
+        // Deep validation: check all nested objects for prototype pollution
+        this.validateNoPrototypePollution(data)
       }
       this.onReadEnd(data)
       return data
     } catch (err) {
       console.error('[security] Observer adapter read error:', err)
       throw err
+    }
+  }
+
+  private validateNoPrototypePollution(obj: any, depth = 0): void {
+    if (depth > 100) {
+      throw new Error('[security] Data structure nesting exceeds safe depth')
+    }
+    
+    if (typeof obj !== 'object' || obj === null) {
+      return
+    }
+    
+    for (const key of Object.keys(obj)) {
+      // Reject dangerous keys
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+        throw new Error(`[security] Prototype pollution attempt detected: ${key}`)
+      }
+      
+      const value = obj[key]
+      if (typeof value === 'object' && value !== null) {
+        this.validateNoPrototypePollution(value, depth + 1)
+      }
     }
   }
 
