@@ -14,6 +14,41 @@ export function isItem(obj: unknown): obj is Item {
   return typeof obj === 'object' && obj !== null && !Array.isArray(obj)
 }
 
+// Sanitize item to prevent injection of unexpected properties
+function sanitizeItem(item: Record<string, unknown>): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {}
+  
+  for (const [key, value] of Object.entries(item)) {
+    // Reject keys that look like prototype pollution attempts
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+      console.warn('[security] Rejected sanitization attempt for key:', key)
+      continue
+    }
+    
+    // Reject excessively long keys
+    if (key.length > 256) {
+      console.warn('[security] Key exceeds length limit:', key.slice(0, 50))
+      continue
+    }
+    
+    // Allow primitives, arrays, and plain objects; reject functions and symbols
+    if (
+      value === null ||
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean'
+    ) {
+      sanitized[key] = value
+    } else if (Array.isArray(value)) {
+      sanitized[key] = value
+    } else if (typeof value === 'object' && value?.constructor === Object) {
+      sanitized[key] = value
+    }
+  }
+  
+  return sanitized
+}
+
 export type PaginatedItems = PaginationResult<Item>
 
 function ensureArray(arg: string | string[] = []): string[] {
@@ -146,7 +181,8 @@ export class Service {
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
 
-    const item = { ...data, id: randomId() }
+    const sanitized = sanitizeItem(data)
+    const item = { ...sanitized, id: randomId() }
     items.push(item)
 
     await this.#db.write()
@@ -157,7 +193,8 @@ export class Service {
     const item = this.#get(name)
     if (item === undefined || Array.isArray(item)) return
 
-    const nextItem = (this.#db.data[name] = isPatch ? { ...item, ...body } : body)
+    const sanitized = sanitizeItem(body)
+    const nextItem = (this.#db.data[name] = isPatch ? { ...item, ...sanitized } : sanitized)
 
     await this.#db.write()
     return nextItem
@@ -175,7 +212,8 @@ export class Service {
     const item = items.find((item) => item['id'] === id)
     if (!item) return
 
-    const nextItem = isPatch ? { ...item, ...body, id } : { ...body, id }
+    const sanitized = sanitizeItem(body)
+    const nextItem = isPatch ? { ...item, ...sanitized, id } : { ...sanitized, id }
     const index = items.indexOf(item)
     items.splice(index, 1, nextItem)
 
