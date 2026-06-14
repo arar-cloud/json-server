@@ -34,6 +34,7 @@ const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_
 const MAX_WHERE_JSON_SIZE = 10000 // 10KB limit
 const MAX_QUERY_STRING_SIZE = 20000 // 20KB limit
 const MAX_BODY_SIZE = 1000000 // 1MB limit for JSON payloads
+const MAX_PARAM_VALUE_SIZE = 5000 // 5KB limit per individual parameter value
 
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
@@ -42,6 +43,14 @@ function parseListParams(req: any) {
     throw new Error('Query string too large')
   }
   const params = new URLSearchParams(queryString)
+  
+  // Validate individual parameter value sizes to prevent single large value bypass
+  for (const [key, value] of params.entries()) {
+    if (typeof value === 'string' && value.length > MAX_PARAM_VALUE_SIZE) {
+      console.warn('[security] Parameter value exceeds size limit:', key, value.length)
+      throw new Error('Parameter value too large')
+    }
+  }
 
   const filterParams = new URLSearchParams()
   for (const [key, value] of params.entries()) {
