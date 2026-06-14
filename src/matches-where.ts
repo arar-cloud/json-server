@@ -5,6 +5,9 @@ import { WHERE_OPERATORS, type WhereOperator } from './where-operators.ts'
 const MAX_RECURSION_DEPTH = 50
 const MAX_PROPERTY_DEPTH = 20
 
+// Operator allowlist for matches-where - restrict to safe comparison operators
+const ALLOWED_MATCH_OPERATORS = new Set(['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in', 'contains', 'startsWith', 'endsWith'])
+
 function countDepth(obj: any, depth = 0): number {
   if (depth > MAX_RECURSION_DEPTH || typeof obj !== 'object' || obj === null) {
     return depth
@@ -25,7 +28,15 @@ function isJSONObject(value: unknown): value is JsonObject {
 }
 
 function isWhereOperator(operator: string): operator is WhereOperator {
-  return Object.prototype.hasOwnProperty.call(WHERE_OPERATORS, operator)
+  // Validate operator is in both system list and security allowlist
+  if (!Object.prototype.hasOwnProperty.call(WHERE_OPERATORS, operator)) {
+    return false
+  }
+  if (!ALLOWED_MATCH_OPERATORS.has(operator)) {
+    console.warn('[security] Operator not in allowlist:', operator)
+    return false
+  }
+  return true
 }
 
 function getKnownOperators(value: unknown): WhereOperator[] {
@@ -43,13 +54,24 @@ function getKnownOperators(value: unknown): WhereOperator[] {
 }
 
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
-  // Validate recursion depth to prevent DoS
+  // Validate input types and recursion depth to prevent DoS
+  if (!isJSONObject(obj) || !isJSONObject(where)) {
+    console.warn('[security] matchesWhere called with non-object arguments')
+    return false
+  }
+  
   if (countDepth(where) > MAX_RECURSION_DEPTH) {
     console.warn('[security] Query exceeds max recursion depth')
     return false
   }
 
   for (const [key, value] of Object.entries(where)) {
+    // Validate key to prevent prototype pollution
+    if (typeof key !== 'string' || key.length > 255 || key.startsWith('__')) {
+      console.warn('[security] Invalid WHERE key in matches-where:', key)
+      return false
+    }
+    
     if (key === 'or') {
       if (!Array.isArray(value) || value.length === 0) return false
 
