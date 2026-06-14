@@ -143,7 +143,7 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   app
     .use((req, res, next) => {
       return cors({
-        origin: (origin, callback) => {
+        origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
           // Allow requests with no origin (same-site requests, mobile apps, etc.)
           if (!origin) {
             return callback(null, true)
@@ -173,7 +173,7 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     : []
 
   if (AUTH_ENABLED) {
-    app.use((req, res, next) => {
+    app.use((req, res, next: (...args: unknown[]) => void) => {
       // Allow public endpoints (health check, etc.)
       if (req.path === '/health' || req.path === '/') {
         return next()

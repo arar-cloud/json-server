@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, accessSync, statSync, constants } from "node:fs";
 import { extname } from "node:path";
 import { parseArgs } from "node:util";
 
@@ -123,6 +123,15 @@ if (file) {
     // Ensure resolved path is within current working directory
     if (!resolvedPath.startsWith(baseDir + path.sep) && resolvedPath !== baseDir) {
       console.log(chalk.red("[security] Path traversal attempt detected: " + file));
+      process.exit(1);
+    }
+    
+    // Check directory writeability for database operations
+    const dir = resolvedPath.substring(0, resolvedPath.lastIndexOf(path.sep));
+    try {
+      accessSync(dir, constants.W_OK);
+    } catch (err) {
+      console.log(chalk.red("[security] Database directory not writable: " + dir));
       process.exit(1);
     }
   } catch (err) {
