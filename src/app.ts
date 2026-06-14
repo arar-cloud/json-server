@@ -146,10 +146,19 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   // Create app
   const app = new App()
 
-  // Static files
+  // Static files with path traversal protection
   app.use(sirv('public', { dev: !isProduction }))
   options.static
     ?.map((path) => (isAbsolute(path) ? path : join(process.cwd(), path)))
+    .filter((dir) => {
+      // Validate that resolved path does not escape intended directory
+      const normalized = require('node:path').normalize(dir)
+      if (!normalized.includes('..') && (isAbsolute(dir) || dir.startsWith(process.cwd()))) {
+        return true
+      }
+      console.warn(`Static directory rejected (potential traversal): ${dir}`)
+      return false
+    })
     .forEach((dir) => app.use(sirv(dir, { dev: !isProduction })))
 
   // CORS
