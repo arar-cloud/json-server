@@ -3,6 +3,25 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
+const MAX_WHERE_DEPTH = 10
+const MAX_WHERE_COMPLEXITY = 100
+
+function validateWhereDepth(obj: unknown, depth: number = 0, complexity: number = 0): number {
+  if (depth > MAX_WHERE_DEPTH) {
+    throw new Error(`Where clause nesting depth exceeds maximum (${MAX_WHERE_DEPTH})`)
+  }
+  if (complexity > MAX_WHERE_COMPLEXITY) {
+    throw new Error(`Where clause complexity exceeds maximum (${MAX_WHERE_COMPLEXITY} operators)`)
+  }
+  let currentComplexity = complexity
+  if (typeof obj === 'object' && obj !== null && !Array.isArray(obj)) {
+    for (const value of Object.values(obj)) {
+      currentComplexity = validateWhereDepth(value, depth + 1, currentComplexity + 1)
+    }
+  }
+  return currentComplexity
+}
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   if (!key || typeof key !== 'string' || key.length === 0) {
     return { path: key, op: null }
@@ -69,5 +88,6 @@ export function parseWhere(query: string): JsonObject {
     setPathOp(out, path, op, rawValue)
   }
 
+  validateWhereDepth(out)
   return out
 }
