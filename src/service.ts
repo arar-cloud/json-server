@@ -6,6 +6,20 @@ import type { JsonObject } from 'type-fest'
 import { matchesWhere } from './matches-where.ts'
 import { paginate, type PaginationResult } from './paginate.ts'
 import { randomId } from './random-id.ts'
+
+// Audit logging for database modifications
+function auditLog(operation: string, resource: string, id?: string, details?: Record<string, unknown>): void {
+  const timestamp = new Date().toISOString()
+  const logMessage = {
+    timestamp,
+    operation,
+    resource,
+    id: id || 'N/A',
+    details: details ? JSON.stringify(details).slice(0, 500) : undefined,
+  }
+  console.log('[audit]', JSON.stringify(logMessage))
+}
+
 export type Item = Record<string, unknown>
 
 export type Data = Record<string, Item[] | Item>
@@ -186,6 +200,7 @@ export class Service {
     items.push(item)
 
     await this.#db.write()
+    auditLog('CREATE', name, item.id as string, { keys: Object.keys(item) })
     return item
   }
 
@@ -218,6 +233,7 @@ export class Service {
     items.splice(index, 1, nextItem)
 
     await this.#db.write()
+    auditLog(isPatch ? 'PATCH' : 'UPDATE', name, id, { keys: Object.keys(body) })
     return nextItem
   }
 
@@ -255,6 +271,7 @@ export class Service {
     deleteDependents(this.#db, name, dependents)
 
     await this.#db.write()
+    auditLog('DELETE', name, id)
     return item
   }
 }
