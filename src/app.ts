@@ -70,12 +70,28 @@ function parseListParams(req: any) {
     }
   }
 
+  // Validate embed parameter: only allow alphanumeric field names
+  let embed = req.query['_embed'] as string | string[] | undefined
+  if (embed) {
+    const embedFields = Array.isArray(embed) ? embed : [embed]
+    // Strict validation: only allow valid field names
+    embed = embedFields.filter(
+      (field) =>
+        typeof field === 'string' &&
+        /^[a-zA-Z0-9_]+$/.test(field) &&
+        field.length > 0
+    ) as string[] | undefined
+    if (Array.isArray(embed) && embed.length === 0) {
+      embed = undefined
+    }
+  }
+
   return {
     where,
     sort: params.get('_sort') ?? undefined,
     page: Number.isNaN(page) ? undefined : page,
     perPage: Number.isNaN(perPage) ? undefined : perPage,
-    embed: req.query['_embed'],
+    embed,
   }
 }
 
