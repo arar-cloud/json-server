@@ -10,7 +10,12 @@ export type PaginationResult<T> = {
 
 export function paginate<T>(items: T[], page: number, perPage: number): PaginationResult<T> {
   const totalItems = items.length
-  const safePerPage = Number.isFinite(perPage) && perPage > 0 ? Math.floor(perPage) : 1
+  
+  // Security: Prevent integer overflow in pagination calculations
+  if (!Number.isFinite(perPage) || perPage !== perPage) return { first: 1, prev: null, next: null, last: 1, pages: 1, items: totalItems, data: [] }
+  if (!Number.isFinite(page) || page !== page) return { first: 1, prev: null, next: null, last: 1, pages: 1, items: totalItems, data: [] }
+  
+  const safePerPage = perPage > 0 ? Math.floor(perPage) : 1
   const pages = Math.max(1, Math.ceil(totalItems / safePerPage))
 
   // Ensure page is within the valid range
@@ -22,8 +27,14 @@ export function paginate<T>(items: T[], page: number, perPage: number): Paginati
   const next = currentPage < pages ? currentPage + 1 : null
   const last = pages
 
-  const start = (currentPage - 1) * safePerPage
-  const end = start + safePerPage
+  // Security: Prevent offset underflow/overflow
+  const offset = (currentPage - 1) * safePerPage
+  if (offset < 0 || !Number.isSafeInteger(offset)) {
+    return { first, prev, next, last, pages, items: totalItems, data: [] }
+  }
+  
+  const start = offset
+  const end = Math.min(start + safePerPage, totalItems)
   const data = items.slice(start, end)
 
   return {
