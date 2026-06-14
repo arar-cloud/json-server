@@ -88,6 +88,10 @@ export function parseWhere(query: string): JsonObject {
     setPathOp(out, path, op, rawValue)
   }
 
-  validateWhereDepth(out)
+  try {
+    validateWhereDepth(out)
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : 'Where clause validation failed')
+  }
   return out
 }
