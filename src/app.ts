@@ -329,6 +329,26 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
 
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
 
+  // Global error handler - sanitize responses in production
+  app.use((err: any, req: any, res: any, next: any) => {
+    console.error('[error]', err)
+    
+    // In production, do not leak stack traces or internal details
+    if (isProduction) {
+      const statusCode = err.status || err.statusCode || 500
+      return res.status(statusCode).json({
+        error: 'Internal server error',
+      })
+    }
+    
+    // In development, include error details for debugging
+    const statusCode = err.status || err.statusCode || 500
+    res.status(statusCode).json({
+      error: err.message || 'Internal server error',
+      ...(process.env.DEBUG && { stack: err.stack }),
+    })
+  })
+
   app.get('/:name', (req, res, next) => {
     const { name = '' } = req.params
     const { where, sort, page, perPage, embed } = parseListParams(req)
