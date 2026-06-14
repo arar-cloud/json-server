@@ -1,3 +1,13 @@
+export function validateSortField(field: string): boolean {
+  // Validate sort field to prevent injection
+  // Allow alphanumeric, underscore, and dot notation for nested fields
+  // Reject reserved fields and suspicious patterns
+  if (typeof field !== 'string' || field.length === 0) return false
+  if (field.startsWith('_') || field.startsWith('$')) return false
+  if (field.includes('..') || field.includes('//')) return false
+  return /^[a-zA-Z0-9_.\-]+$/.test(field)
+}
+
 import { setProperty } from 'dot-prop'
 import type { JsonObject } from 'type-fest'
 
