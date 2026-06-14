@@ -13,6 +13,7 @@ import type { PackageJson } from "type-fest";
 
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { isAbsolute, resolve } from "node:path";
 import { NormalizedAdapter } from "./adapters/normalized-adapter.ts";
 import type { RawData } from "./adapters/normalized-adapter.ts";
 import { Observer } from "./adapters/observer.ts";
@@ -115,14 +116,19 @@ function args(): {
 
 const { file, port, host, static: staticArr } = args();
 
-// Validate and canonicalize file path to prevent directory traversal
-if (file) {
+// Validate database file path
+function validateFilePath(filePath: string): string {
+  if (!filePath) {
+    console.log(chalk.red('[security] Database file path is required'));
+    process.exit(1);
+  }
+
   try {
-    const resolvedPath = path.resolve(process.cwd(), file);
+    const resolvedPath = path.resolve(process.cwd(), filePath);
     const baseDir = path.resolve(process.cwd());
     // Ensure resolved path is within current working directory
     if (!resolvedPath.startsWith(baseDir + path.sep) && resolvedPath !== baseDir) {
-      console.log(chalk.red("[security] Path traversal attempt detected: " + file));
+      console.log(chalk.red('[security] Path traversal attempt detected: ' + filePath));
       process.exit(1);
     }
     
@@ -131,34 +137,61 @@ if (file) {
     try {
       accessSync(dir, constants.W_OK);
     } catch (err) {
-      console.log(chalk.red("[security] Database directory not writable: " + dir));
+      console.log(chalk.red('[security] Database directory not writable: ' + dir));
       process.exit(1);
     }
+    
+    return resolvedPath;
   } catch (err) {
-    console.log(chalk.red("[security] Invalid file path: " + file));
+    console.log(chalk.red('[security] Invalid file path: ' + filePath));
     process.exit(1);
   }
 }
 
-if (!existsSync(file)) {
-  console.log(chalk.red(`File ${file} not found`));
+const validatedFile = validateFilePath(file);
+
+if (!existsSync(validatedFile)) {
+  console.log(chalk.red(`File ${validatedFile} not found`));
   process.exit(1);
 }
 
 // Handle empty string JSON file
-if (readFileSync(file, "utf-8").trim() === "") {
-  writeFileSync(file, "{}");
+if (readFileSync(validatedFile, "utf-8").trim() === "") {
+  writeFileSync(validatedFile, "{}");
+}
+
+// Validate static directory paths
+function validateStaticPaths(paths: string[]): string[] {
+  return paths.filter((dir) => {
+    try {
+      const resolved = isAbsolute(dir) ? dir : resolve(process.cwd(), dir);
+      const baseDir = resolve(process.cwd());
+      // Check for path traversal
+      if (!resolved.startsWith(baseDir + path.sep) && resolved !== baseDir) {
+        console.log(chalk.yellow('[security] Static dir path traversal blocked: ' + dir));
+        return false;
+      }
+      if (!existsSync(resolved)) {
+        console.log(chalk.yellow('[security] Static dir does not exist: ' + dir));
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.log(chalk.yellow('[security] Invalid static dir: ' + dir));
+      return false;
+    }
+  });
 }
 
 // Set up database
 let adapter: Adapter<RawData>;
-if (extname(file) === ".json5") {
-  adapter = new DataFile<RawData>(file, {
+if (extname(validatedFile) === ".json5") {
+  adapter = new DataFile<RawData>(validatedFile, {
     parse: JSON5.parse,
     stringify: JSON5.stringify,
   });
 } else {
-  adapter = new JSONFile<RawData>(file);
+  adapter = new JSONFile<RawData>(validatedFile);
 }
 const observer = new Observer(new NormalizedAdapter(adapter));
 
@@ -166,7 +199,8 @@ const db = new Low<Data>(observer, {});
 await db.read();
 
 // Create app
-const app = createApp(db, { logger: false, static: staticArr });
+const validatedStatic = validateStaticPaths(staticArr);
+const app = createApp(db, { logger: false, static: validatedStatic });
 
 function logRoutes(data: Data) {
   console.log(chalk.bold("Endpoints:"));
