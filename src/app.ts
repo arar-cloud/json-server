@@ -68,11 +68,12 @@ function validatePaginationParams(page?: unknown, perPage?: unknown): { page: nu
   const p = typeof page === 'string' ? Number.parseInt(page, 10) : 1
   const pp = typeof perPage === 'string' ? Number.parseInt(perPage, 10) : 10
 
-  if (!Number.isInteger(p) || p < 1 || p > MAX_PAGE) {
-    throw new Error(`Invalid _page parameter: must be a positive integer between 1 and ${MAX_PAGE}`)
+  // Reject NaN, Infinity, and non-integers
+  if (!Number.isFinite(p) || !Number.isInteger(p) || p < 1 || p > MAX_PAGE) {
+    throw new Error(`Invalid _page parameter: must be a positive integer between 1 and ${MAX_PAGE}, got ${p}`)
   }
-  if (!Number.isInteger(pp) || pp < 1 || pp > MAX_PER_PAGE) {
-    throw new Error(`Invalid _per_page parameter: must be a positive integer between 1 and ${MAX_PER_PAGE}`)
+  if (!Number.isFinite(pp) || !Number.isInteger(pp) || pp < 1 || pp > MAX_PER_PAGE) {
+    throw new Error(`Invalid _per_page parameter: must be a positive integer between 1 and ${MAX_PER_PAGE}, got ${pp}`)
   }
 
   return { page: p, perPage: pp }
