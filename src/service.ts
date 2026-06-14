@@ -28,20 +28,37 @@ export function isItem(obj: unknown): obj is Item {
   return typeof obj === 'object' && obj !== null && !Array.isArray(obj)
 }
 
-// Sanitize item to prevent injection of unexpected properties
+// Sanitize item to prevent injection of unexpected properties and prototype pollution
 function sanitizeItem(item: Record<string, unknown>): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {}
+  const MAX_PROPERTY_COUNT = 100
+  const MAX_PROPERTY_NAME_LENGTH = 255
+  const FORBIDDEN_KEYS = new Set([
+    '__proto__',
+    'constructor',
+    'prototype',
+    'eval',
+    'exec',
+    'Function',
+  ])
+  
+  let propertyCount = 0
   
   for (const [key, value] of Object.entries(item)) {
-    // Reject keys that look like prototype pollution attempts
-    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
-      console.warn('[security] Rejected sanitization attempt for key:', key)
+    // Check property count limit
+    if (propertyCount >= MAX_PROPERTY_COUNT) {
+      console.warn('[security] Rejected item with too many properties')
+      break
+    }
+    
+    // Validate key format and reject forbidden keys
+    if (typeof key !== 'string' || key.length === 0 || key.length > MAX_PROPERTY_NAME_LENGTH) {
+      console.warn('[security] Rejected invalid or excessively long property key')
       continue
     }
     
-    // Reject excessively long keys
-    if (key.length > 256) {
-      console.warn('[security] Key exceeds length limit:', key.slice(0, 50))
+    if (FORBIDDEN_KEYS.has(key) || key.startsWith('_')) {
+      console.warn('[security] Rejected forbidden key:', key)
       continue
     }
     
@@ -58,6 +75,8 @@ function sanitizeItem(item: Record<string, unknown>): Record<string, unknown> {
     } else if (typeof value === 'object' && value?.constructor === Object) {
       sanitized[key] = value
     }
+    
+    propertyCount++
   }
   
   return sanitized
