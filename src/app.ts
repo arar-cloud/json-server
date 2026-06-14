@@ -158,15 +158,23 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
 
   app.get('/:name', (req, res, next) => {
     const { name = '' } = req.params
-    const { where, sort, page, perPage, embed } = parseListParams(req)
-
-    res.locals['data'] = service.find(name, {
-      where,
-      sort,
-      page,
-      perPage,
-      embed,
-    })
+    try {
+      const { where, sort, page, perPage, embed } = parseListParams(req)
+      // Validate pagination parameters
+      if (page !== undefined || perPage !== undefined) {
+        validatePaginationParams(page, perPage)
+      }
+      res.locals['data'] = service.find(name, {
+        where,
+        sort,
+        page,
+        perPage,
+        embed,
+      })
+    } catch (error) {
+      res.status(400)
+      return res.json({ error: error instanceof Error ? error.message : 'Invalid request parameters' })
+    }
     next?.()
   })
 
