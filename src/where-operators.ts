@@ -1,3 +1,14 @@
+// Allowlist of safe comparison operators
+const SAFE_OPERATORS = new Set(['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'like', 'in'])
+
+// Validate operator safety
+function validateOperator(op: string): boolean {
+  if (typeof op !== 'string' || op.length === 0 || op.length > 50) {
+    return false
+  }
+  return SAFE_OPERATORS.has(op)
+}
+
 export const WHERE_OPERATORS = [
   'lt',
   'lte',
