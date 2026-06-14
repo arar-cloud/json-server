@@ -1,3 +1,24 @@
+// Safe numeric comparison helpers
+function safeNumericCompare(a: unknown, b: unknown, operator: 'lt' | 'lte' | 'gt' | 'gte'): boolean {
+  // Convert to numbers safely, reject non-numeric
+  const numA = typeof a === 'number' ? a : typeof a === 'string' ? Number(a) : null
+  const numB = typeof b === 'number' ? b : typeof b === 'string' ? Number(b) : null
+
+  // Reject if either is null, NaN, or not finite
+  if (numA === null || numB === null || !Number.isFinite(numA) || !Number.isFinite(numB)) {
+    return false
+  }
+
+  // Perform safe comparison
+  switch (operator) {
+    case 'lt': return numA < numB
+    case 'lte': return numA <= numB
+    case 'gt': return numA > numB
+    case 'gte': return numA >= numB
+    default: return false
+  }
+}
+
 export const WHERE_OPERATORS = [
   'lt',
   'lte',
