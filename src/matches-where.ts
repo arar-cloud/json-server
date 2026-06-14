@@ -7,7 +7,7 @@ type OperatorObject = Partial<Record<WhereOperator, unknown>>
 const MAX_RECURSION_DEPTH = 50
 const SEEN_OBJECTS = new WeakSet<object>()
 
-function isJSONObject(value: unknown): value is JsonObject {
+function isJSONObject(value: unknown): value is JsonObject, depth + 1 {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
