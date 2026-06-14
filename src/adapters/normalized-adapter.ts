@@ -1,3 +1,39 @@
+// Retry helpers for transient failures
+const MAX_RETRY_ATTEMPTS = 3
+const INITIAL_RETRY_DELAY_MS = 100
+
+async function retryWithBackoff<T>(
+  operation: () => Promise<T>,
+  context: string = 'operation',
+): Promise<T> {
+  let lastError: Error | null = null
+  
+  for (let attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
+    try {
+      return await operation()
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+      
+      // Check if error is retryable (transient)
+      const isRetryable = error instanceof Error && 
+        (error.message.includes('ENOENT') || 
+         error.message.includes('EACCES') || 
+         error.message.includes('EAGAIN') ||
+         error.message.includes('ENOMEM') ||
+         error.message.includes('EIO'))
+      
+      if (!isRetryable || attempt === MAX_RETRY_ATTEMPTS - 1) {
+        throw lastError
+      }
+      
+      const delayMs = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt)
+      await new Promise(resolve => setTimeout(resolve, delayMs))
+    }
+  }
+  
+  throw lastError || new Error(`${context} failed after ${MAX_RETRY_ATTEMPTS} attempts`)
+}
+
 function validateReferentialIntegrity(data: Record<string, any>, originalData?: Record<string, any>): void {
   // Check for broken foreign key references after mutation
   for (const [resource, items] of Object.entries(data)) {
