@@ -4,6 +4,11 @@ import type { JsonObject } from 'type-fest'
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
+  // Validate input is a string to prevent prototype pollution
+  if (typeof key !== 'string' || key.length === 0) {
+    return { path: '', op: null }
+  }
+
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
     const path = key.slice(0, colonIdx)
@@ -12,7 +17,12 @@ function splitKey(key: string): { path: string; op: WhereOperator | null } {
       return { path: key, op: 'eq' }
     }
 
-    return isWhereOperator(op) ? { path, op } : { path, op: null }
+    // Strict validation: only accept if op is a known operator
+    if (isWhereOperator(op)) {
+      return { path, op }
+    }
+    // Reject unknown operators
+    return { path: key, op: null }
   }
 
   // Compatibility with v0.17 operator style (e.g. _lt, _gt)
