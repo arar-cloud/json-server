@@ -193,14 +193,14 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   // Body parser with Content-Type validation
   app.use((req, res, next) => {
     // Only allow JSON content type for POST/PUT/PATCH
-    if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+    if (req.method && ['POST', 'PUT', 'PATCH'].includes(req.method)) {
       const contentType = req.headers['content-type'] ?? ''
       if (!contentType.includes('application/json')) {
         console.warn('[security] Invalid Content-Type for', req.method, ':', contentType)
         return res.status(415).json({ error: 'Content-Type must be application/json' })
       }
     }
-    next()
+    next && next()
   })
   app.use(json())
 
@@ -211,10 +211,10 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     : []
 
   if (AUTH_ENABLED) {
-    app.use((req, res, next: (...args: unknown[]) => void) => {
+    app.use((req, res, next) => {
       // Allow public endpoints (health check, etc.)
       if (req.path === '/health' || req.path === '/') {
-        return next()
+        return next?.()
       }
 
       // Check for Authorization header or x-api-key
@@ -225,10 +225,10 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
       if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.slice(7)
         if (VALID_API_KEYS.includes(token)) {
-          return next()
+          return next?.()
         }
       } else if (apiKey && VALID_API_KEYS.includes(apiKey)) {
-        return next()
+        return next?.()
       }
 
       console.warn('[security] Unauthorized request:', req.method, req.path)

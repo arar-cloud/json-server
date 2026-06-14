@@ -14,7 +14,7 @@ import type { JsonObject } from 'type-fest'
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
 // Allowed operators for filtering - explicit allowlist to prevent bypass
-const ALLOWED_OPERATORS = new Set<WhereOperator>(['eq', 'lt', 'lte', 'gt', 'gte', 'ne', 'in', 'regex', 'search'])
+const ALLOWED_OPERATORS = new Set<WhereOperator>(['eq', 'lt', 'lte', 'gt', 'gte', 'ne', 'in', 'contains', 'startsWith', 'endsWith'])
 
 function isValidOperator(op: unknown): op is WhereOperator {
   return typeof op === 'string' && ALLOWED_OPERATORS.has(op as WhereOperator)
