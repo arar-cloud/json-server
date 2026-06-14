@@ -28,6 +28,7 @@ const eta = new Eta({
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
 const MAX_WHERE_JSON_SIZE = 10000 // 10KB limit
 const MAX_QUERY_STRING_SIZE = 20000 // 20KB limit
+const MAX_BODY_SIZE = 1000000 // 1MB limit for JSON payloads
 
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
@@ -190,8 +191,33 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     })
     .options('*', cors())
 
-  // Body parser with Content-Type validation
+  // Security headers middleware
   app.use((req, res, next) => {
+    // Content Security Policy: prevent inline scripts and restrict resource sources
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    )
+    // Prevent clickjacking
+    res.setHeader('X-Frame-Options', 'DENY')
+    // Prevent MIME sniffing
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    // Enable XSS protection in older browsers
+    res.setHeader('X-XSS-Protection', '1; mode=block')
+    // Referrer policy
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+    next && next()
+  })
+
+  // Body parser with Content-Type validation and size limit
+  app.use((req, res, next) => {
+    // Check Content-Length before parsing
+    const contentLength = req.headers['content-length']
+    if (contentLength && Number.parseInt(contentLength, 10) > MAX_BODY_SIZE) {
+      console.warn('[security] Request body exceeds size limit')
+      return res.status(413).json({ error: 'Payload too large' })
+    }
+    
     // Only allow JSON content type for POST/PUT/PATCH
     if (req.method && ['POST', 'PUT', 'PATCH'].includes(req.method)) {
       const contentType = req.headers['content-type'] ?? ''
@@ -202,7 +228,7 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     }
     next && next()
   })
-  app.use(json())
+  app.use(json({ limit: `${MAX_BODY_SIZE}b` }))
 
   // Authentication middleware (configurable via AUTH_ENABLED env var)
   const AUTH_ENABLED = process.env.AUTH_ENABLED === 'true'
