@@ -24,7 +24,7 @@ export function randomId(existingIds?: Set<string>): string {
   RECENT_IDS.add(id)
   if (RECENT_IDS.size > MAX_RECENT_IDS) {
     const firstId = RECENT_IDS.values().next().value
-    RECENT_IDS.delete(firstId)
+    if (firstId !== undefined) RECENT_IDS.delete(firstId)
   }
   
   return id
