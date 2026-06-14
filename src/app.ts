@@ -228,7 +228,7 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     }
     next && next()
   })
-  app.use(json({ limit: `${MAX_BODY_SIZE}b` }))
+  app.use(json())
 
   // Authentication middleware (configurable via AUTH_ENABLED env var)
   const AUTH_ENABLED = process.env.AUTH_ENABLED === 'true'

@@ -10,7 +10,9 @@ function validateOperator(op: string): boolean {
 }
 
 // Strict type validation helpers for operator parameters
-function isValidComparable(value: unknown): boolean {
+type Comparable = string | number | boolean | null
+
+function isValidComparable(value: unknown): value is Comparable {
   const type = typeof value
   return type === 'string' || type === 'number' || type === 'boolean' || value === null
 }
@@ -35,23 +37,27 @@ const operatorFunctions = {
   },
   lt: (value: unknown, target: unknown) => {
     if (!isValidComparable(value) || !isValidComparable(target)) return false
+    if (value === null || target === null) return false
     if (typeof value !== typeof target) return false
-    return value < target
+    return (value as string | number | boolean) < (target as string | number | boolean)
   },
   lte: (value: unknown, target: unknown) => {
     if (!isValidComparable(value) || !isValidComparable(target)) return false
+    if (value === null || target === null) return false
     if (typeof value !== typeof target) return false
-    return value <= target
+    return (value as string | number | boolean) <= (target as string | number | boolean)
   },
   gt: (value: unknown, target: unknown) => {
     if (!isValidComparable(value) || !isValidComparable(target)) return false
+    if (value === null || target === null) return false
     if (typeof value !== typeof target) return false
-    return value > target
+    return (value as string | number | boolean) > (target as string | number | boolean)
   },
   gte: (value: unknown, target: unknown) => {
     if (!isValidComparable(value) || !isValidComparable(target)) return false
+    if (value === null || target === null) return false
     if (typeof value !== typeof target) return false
-    return value >= target
+    return (value as string | number | boolean) >= (target as string | number | boolean)
   },
   in: (value: unknown, target: unknown) => {
     if (!Array.isArray(target)) return false
