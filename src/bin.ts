@@ -163,7 +163,7 @@ function randomItem(items: string[]): string {
   return items.at(index) ?? "";
 }
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(
     [
       chalk.bold(`JSON Server started on PORT :${port}`),
@@ -182,6 +182,28 @@ app.listen(port, () => {
   );
   logRoutes(db.data);
 });
+
+// Graceful shutdown handlers
+const shutdown = (signal: string) => {
+  console.log(`\n${signal} received, draining requests...`);
+  server.close((err) => {
+    if (err) {
+      console.error('Error during shutdown:', err);
+      process.exit(1);
+    }
+    console.log(chalk.blue('Server closed gracefully'));
+    process.exit(0);
+  });
+  
+  // Force exit after 10s if graceful shutdown fails
+  setTimeout(() => {
+    console.error('Graceful shutdown timeout, forcing exit');
+    process.exit(1);
+  }, 10_000);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 // Watch file for changes
 if (process.env["NODE_ENV"] !== "production") {
