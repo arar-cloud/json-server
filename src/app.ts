@@ -27,6 +27,23 @@ const eta = new Eta({
 
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
 
+const MAX_PAGE = 1_000_000
+const MAX_PER_PAGE = 1_000
+
+function validatePaginationParams(page?: unknown, perPage?: unknown): { page: number; perPage: number } {
+  const p = typeof page === 'string' ? Number.parseInt(page, 10) : 1
+  const pp = typeof perPage === 'string' ? Number.parseInt(perPage, 10) : 10
+
+  if (!Number.isInteger(p) || p < 1 || p > MAX_PAGE) {
+    throw new Error(`Invalid _page parameter: must be a positive integer between 1 and ${MAX_PAGE}`)
+  }
+  if (!Number.isInteger(pp) || pp < 1 || pp > MAX_PER_PAGE) {
+    throw new Error(`Invalid _per_page parameter: must be a positive integer between 1 and ${MAX_PER_PAGE}`)
+  }
+
+  return { page: p, perPage: pp }
+}
+
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
   const params = new URLSearchParams(queryString)
