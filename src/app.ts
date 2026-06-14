@@ -106,9 +106,27 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     .forEach((dir) => app.use(sirv(dir, { dev: !isProduction })))
 
   // CORS
+  // Strict CORS configuration: validate origin against allowlist
+  const corsOriginAllowlist = process.env.CORS_ORIGIN_ALLOWLIST
+    ? process.env.CORS_ORIGIN_ALLOWLIST.split(',')
+    : ['http://localhost:3000', 'http://localhost:3001']
+
   app
     .use((req, res, next) => {
       return cors({
+        origin: (origin, callback) => {
+          // Allow requests with no origin (same-site requests, mobile apps, etc.)
+          if (!origin) {
+            return callback(null, true)
+          }
+          if (corsOriginAllowlist.includes(origin)) {
+            callback(null, true)
+          } else {
+            console.warn('[security] CORS origin rejected:', origin)
+            callback(new Error('CORS policy violation'))
+          }
+        },
+        credentials: true,
         allowedHeaders: req.headers['access-control-request-headers']
           ?.split(',')
           .map((h) => h.trim()),
