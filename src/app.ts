@@ -182,8 +182,9 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     })
     .options('*', cors())
 
-  // Body parser
-  app.use(json())
+  // Body parser with size limit to prevent DoS
+  const MAX_JSON_SIZE = 1_048_576 // 1MB
+  app.use(json({ limit: MAX_JSON_SIZE }))
 
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
 
