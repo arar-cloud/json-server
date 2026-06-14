@@ -95,13 +95,13 @@ export function isOperator(value: unknown, op: WhereOperator, operand: unknown):
     case 'ne':
       return value !== operand
     case 'lt':
-      return typeof value === 'number' && typeof operand === 'number' && value < operand
+      return safeNumericCompare(value, operand, 'lt')
     case 'lte':
-      return typeof value === 'number' && typeof operand === 'number' && value <= operand
+      return safeNumericCompare(value, operand, 'lte')
     case 'gt':
-      return typeof value === 'number' && typeof operand === 'number' && value > operand
+      return safeNumericCompare(value, operand, 'gt')
     case 'gte':
-      return typeof value === 'number' && typeof operand === 'number' && value >= operand
+      return safeNumericCompare(value, operand, 'gte')
     case 'in':
       return Array.isArray(operand) && operand.includes(value)
     case 'contains':
