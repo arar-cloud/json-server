@@ -209,6 +209,28 @@ export class Service {
     }
   }
 
+  async destroy(
+    name: string,
+    dependent?: string | string[],
+  ): Promise<Item | undefined> {
+    const item = this.#get(name)
+    if (item === undefined || Array.isArray(item)) return
+
+    const originalItem = item
+
+    try {
+      // Clear the item data
+      this.#db.data[name] = {}
+
+      await this.#db.write()
+      return originalItem
+    } catch (writeError) {
+      // Rollback on write failure
+      this.#db.data[name] = originalItem
+      throw writeError
+    }
+  }
+
   async update(name: string, body: Item = {}): Promise<Item | undefined> {
     return this.#updateOrPatch(name, body, false)
   }
@@ -230,19 +252,31 @@ export class Service {
     id: string,
     dependent?: string | string[],
   ): Promise<Item | undefined> {
-    const items = this.#get(name)
-    if (items === undefined || !Array.isArray(items)) return
+    try {
+      const items = this.#get(name)
+      if (items === undefined || !Array.isArray(items)) return
 
-    const item = items.find((item) => item['id'] === id)
-    if (item === undefined) return
-    const index = items.indexOf(item)
-    items.splice(index, 1)
+      const item = items.find((item) => item['id'] === id)
+      if (item === undefined) return
+      const index = items.indexOf(item)
+      const previousItem = items[index]
+      items.splice(index, 1)
 
-    nullifyForeignKey(this.#db, name, id)
-    const dependents = ensureArray(dependent)
-    deleteDependents(this.#db, name, dependents)
+      try {
+        nullifyForeignKey(this.#db, name, id)
+        const dependents = ensureArray(dependent)
+        deleteDependents(this.#db, name, dependents)
 
-    await this.#db.write()
-    return item
+        await this.#db.write()
+      } catch (writeError) {
+        // Rollback on write failure
+        items.splice(index, 0, previousItem)
+        throw writeError
+      }
+      return item
+    } catch (error) {
+      console.error(`Failed to delete item in ${name}:`, error)
+      throw error
+    }
   }
 }
