@@ -2,6 +2,22 @@ import type { JsonObject } from 'type-fest'
 
 import { WHERE_OPERATORS, type WhereOperator } from './where-operators.ts'
 
+const MAX_RECURSION_DEPTH = 50
+const MAX_PROPERTY_DEPTH = 20
+
+function countDepth(obj: any, depth = 0): number {
+  if (depth > MAX_RECURSION_DEPTH || typeof obj !== 'object' || obj === null) {
+    return depth
+  }
+  let maxChildDepth = depth
+  for (const key of Object.keys(obj)) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      maxChildDepth = Math.max(maxChildDepth, countDepth(obj[key], depth + 1))
+    }
+  }
+  return maxChildDepth
+}
+
 type OperatorObject = Partial<Record<WhereOperator, unknown>>
 
 function isJSONObject(value: unknown): value is JsonObject {
@@ -23,6 +39,12 @@ function getKnownOperators(value: unknown): WhereOperator[] {
 }
 
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
+  // Validate recursion depth to prevent DoS
+  if (countDepth(where) > MAX_RECURSION_DEPTH) {
+    console.warn('[security] Query exceeds max recursion depth')
+    return false
+  }
+
   for (const [key, value] of Object.entries(where)) {
     if (key === 'or') {
       if (!Array.isArray(value) || value.length === 0) return false
