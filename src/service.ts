@@ -147,6 +147,8 @@ export class Service {
     return
   }
 
+  private MAX_PRE_FILTER_RESULTS = 10_000
+
   find(
     name: string,
     opts: {
