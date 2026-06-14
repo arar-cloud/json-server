@@ -174,7 +174,18 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     })
     .options('*', cors())
 
-  // Body parser
+  // Body parser with Content-Type validation
+  app.use((req, res, next) => {
+    // Only allow JSON content type for POST/PUT/PATCH
+    if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+      const contentType = req.headers['content-type'] ?? ''
+      if (!contentType.includes('application/json')) {
+        console.warn('[security] Invalid Content-Type for', req.method, ':', contentType)
+        return res.status(415).json({ error: 'Content-Type must be application/json' })
+      }
+    }
+    next()
+  })
   app.use(json())
 
   // Authentication middleware (configurable via AUTH_ENABLED env var)
