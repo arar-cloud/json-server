@@ -28,9 +28,9 @@ function embed(db: Low<Data>, name: string, item: Item, related: string): Item {
     }
     const foreignKey = `${related}Id`
     const relatedItem = relatedData.find((relatedItem: Item) => {
-      return relatedItem['id'] === item[foreignKey]
+      return relatedItem && relatedItem['id'] === item[foreignKey]
     })
-    return { ...item, [related]: relatedItem }
+    return { ...item, [related]: relatedItem || undefined }
   }
   const relatedData: Item[] = db.data[related] as Item[]
 
@@ -40,7 +40,7 @@ function embed(db: Low<Data>, name: string, item: Item, related: string): Item {
 
   const foreignKey = `${inflection.singularize(name)}Id`
   const relatedItems = relatedData.filter(
-    (relatedItem: Item) => relatedItem[foreignKey] === item['id'],
+    (relatedItem: Item) => relatedItem && relatedItem[foreignKey] === item['id'],
   )
 
   return { ...item, [related]: relatedItems }
