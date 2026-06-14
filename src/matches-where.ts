@@ -4,8 +4,20 @@ import { WHERE_OPERATORS, type WhereOperator } from './where-operators.ts'
 
 type OperatorObject = Partial<Record<WhereOperator, unknown>>
 
+const MAX_RECURSION_DEPTH = 50
+const SEEN_OBJECTS = new WeakSet<object>()
+
 function isJSONObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function checkCircularReference(obj: unknown): void {
+  if (typeof obj === 'object' && obj !== null) {
+    if (SEEN_OBJECTS.has(obj)) {
+      throw new Error('Circular reference detected in where clause')
+    }
+    SEEN_OBJECTS.add(obj)
+  }
 }
 
 function getKnownOperators(value: unknown): WhereOperator[] {
