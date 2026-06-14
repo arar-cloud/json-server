@@ -29,10 +29,10 @@ function embed(db: Low<Data>, name: string, item: Item, related: string, depth: 
 
   // Check for self-reference or circular reference
   const itemId = item.id
-  if (itemId && visitedIds.has(itemId)) {
+  if ((typeof itemId === 'string' || typeof itemId === 'number') && visitedIds.has(itemId)) {
     return item // Already embedded this item, stop to prevent infinite loop
   }
-  if (itemId) {
+  if (typeof itemId === 'string' || typeof itemId === 'number') {
     visitedIds = new Set(visitedIds)
     visitedIds.add(itemId)
   }
@@ -44,7 +44,8 @@ function embed(db: Low<Data>, name: string, item: Item, related: string, depth: 
     }
     const foreignKey = `${related}Id`
     const relatedItem = relatedData.find((relatedItem: Item) => {
-      return relatedItem && relatedItem['id'] === item[foreignKey] && !visitedIds.has(relatedItem['id'])
+      const rid = relatedItem['id']
+      return relatedItem && relatedItem['id'] === item[foreignKey] && (typeof rid !== 'string' && typeof rid !== 'number' || !visitedIds.has(rid))
     })
     return { ...item, [related]: relatedItem || undefined }
   }
@@ -55,9 +56,10 @@ function embed(db: Low<Data>, name: string, item: Item, related: string, depth: 
   }
 
   const foreignKey = `${inflection.singularize(name)}Id`
-  const relatedItems = relatedData.filter(
-    (relatedItem: Item) => relatedItem && relatedItem[foreignKey] === item['id'] && !visitedIds.has(relatedItem['id']),
-  )
+  const relatedItems = relatedData.filter((relatedItem: Item) => {
+    const rid = relatedItem['id']
+    return relatedItem && relatedItem[foreignKey] === item['id'] && (typeof rid !== 'string' && typeof rid !== 'number' || !visitedIds.has(rid))
+  })
 
   return { ...item, [related]: relatedItems }
 }

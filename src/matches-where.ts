@@ -7,16 +7,21 @@ type OperatorObject = Partial<Record<WhereOperator, unknown>>
 const MAX_RECURSION_DEPTH = 50
 const SEEN_OBJECTS = new WeakSet<object>()
 
-function isJSONObject(value: unknown): value is JsonObject, depth + 1 {
+function isJSONObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function checkCircularReference(obj: unknown): void {
-  if (typeof obj === 'object' && obj !== null) {
-    if (SEEN_OBJECTS.has(obj)) {
-      throw new Error('Circular reference detected in where clause')
+  try {
+    if (typeof obj === 'object' && obj !== null) {
+      if (SEEN_OBJECTS.has(obj)) {
+        throw new Error('Circular reference detected in where clause')
+      }
+      SEEN_OBJECTS.add(obj)
     }
-    SEEN_OBJECTS.add(obj)
+  } catch (error) {
+    console.error('Circular reference in where clause:', error instanceof Error ? error.message : error)
+    throw error
   }
 }
 
@@ -34,6 +39,11 @@ function getKnownOperators(value: unknown): WhereOperator[] {
 }
 
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
+  // Handle null/undefined safely
+  if (obj === null || obj === undefined || where === null || where === undefined) {
+    return false
+  }
+  
   for (const [key, value] of Object.entries(where)) {
     if (key === 'or') {
       if (!Array.isArray(value) || value.length === 0) return false

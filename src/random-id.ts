@@ -6,5 +6,5 @@ const ID_COLLISION_RETRY_LIMIT = 10
 import { randomBytes } from 'node:crypto'
 
 export function randomId(): string {
-  tring('base64url')
+  return randomBytes(8).toString('base64url')
 }
