@@ -13,7 +13,8 @@ function getKnownOperators(value: unknown): WhereOperator[] {
 
   const ops: WhereOperator[] = []
   for (const op of WHERE_OPERATORS) {
-    if (op in value) {
+    // Use hasOwnProperty to avoid prototype pollution
+    if (Object.prototype.hasOwnProperty.call(value, op)) {
       ops.push(op)
     }
   }
