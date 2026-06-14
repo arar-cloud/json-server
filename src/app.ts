@@ -91,11 +91,12 @@ function parseListParams(req: any) {
   if (typeof rawWhere === 'string') {
     try {
       const parsed = JSON.parse(rawWhere)
+      validateJsonDepth(parsed)
       if (typeof parsed === 'object' && parsed !== null) {
         where = parsed
       }
-    } catch {
-      // Ignore invalid JSON and fallback to parsed query params
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Invalid _where parameter')
     }
   }
 
