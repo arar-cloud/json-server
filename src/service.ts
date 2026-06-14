@@ -96,11 +96,33 @@ function deleteDependents(db: Low<Data>, name: string, dependents: string[]) {
   })
 }
 
+// Track recent operations for idempotency
+const OPERATION_CACHE = new Map<string, { result: unknown; timestamp: number }>()
+const CACHE_TTL_MS = 5_000
+
 export class Service {
   #db: Low<Data>
 
   constructor(db: Low<Data>) {
     this.#db = db
+  }
+
+  private getIdempotencyKey(method: string, name: string, id?: string, body?: unknown): string {
+    return `${method}:${name}:${id || ''}:${JSON.stringify(body || {})}`
+  }
+
+  private getCachedResult(key: string): unknown | null {
+    const entry = OPERATION_CACHE.get(key)
+    if (!entry) return null
+    if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+      OPERATION_CACHE.delete(key)
+      return null
+    }
+    return entry.result
+  }
+
+  private setCachedResult(key: string, result: unknown): void {
+    OPERATION_CACHE.set(key, { result, timestamp: Date.now() })
   }
 
   #get(name: string): Item[] | Item | undefined {
