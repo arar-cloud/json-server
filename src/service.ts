@@ -143,14 +143,28 @@ export class Service {
   }
 
   async create(name: string, data: Omit<Item, 'id'> = {}): Promise<Item | undefined> {
-    const items = this.#get(name)
-    if (items === undefined || !Array.isArray(items)) return
+    try {
+      const items = this.#get(name)
+      if (items === undefined || !Array.isArray(items)) return
 
-    const item = { ...data, id: randomId() }
-    items.push(item)
+      const item = { ...data, id: randomId() }
+      const beforeLength = items.length
+      items.push(item)
 
-    await this.#db.write()
-    return item
+      try {
+        await this.#db.write()
+      } catch (writeError) {
+        // Rollback on write failure
+        if (items.length > beforeLength) {
+          items.pop()
+        }
+        throw writeError
+      }
+      return item
+    } catch (error) {
+      console.error(`Failed to create item in ${name}:`, error)
+      throw error
+    }
   }
 
   async #updateOrPatch(name: string, body: Item = {}, isPatch: boolean): Promise<Item | undefined> {
@@ -169,18 +183,30 @@ export class Service {
     body: Item = {},
     isPatch: boolean,
   ): Promise<Item | undefined> {
-    const items = this.#get(name)
-    if (items === undefined || !Array.isArray(items)) return
+    try {
+      const items = this.#get(name)
+      if (items === undefined || !Array.isArray(items)) return
 
-    const item = items.find((item) => item['id'] === id)
-    if (!item) return
+      const item = items.find((item) => item['id'] === id)
+      if (!item) return
 
-    const nextItem = isPatch ? { ...item, ...body, id } : { ...body, id }
-    const index = items.indexOf(item)
-    items.splice(index, 1, nextItem)
+      const nextItem = isPatch ? { ...item, ...body, id } : { ...body, id }
+      const index = items.indexOf(item)
+      const previousItem = items[index]
+      items.splice(index, 1, nextItem)
 
-    await this.#db.write()
-    return nextItem
+      try {
+        await this.#db.write()
+      } catch (writeError) {
+        // Rollback on write failure
+        items.splice(index, 1, previousItem)
+        throw writeError
+      }
+      return nextItem
+    } catch (error) {
+      console.error(`Failed to update item in ${name}:`, error)
+      throw error
+    }
   }
 
   async update(name: string, body: Item = {}): Promise<Item | undefined> {
