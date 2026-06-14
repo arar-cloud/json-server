@@ -5,6 +5,7 @@ import { parseArgs } from "node:util";
 
 import chalk from "chalk";
 import { watch } from "chokidar";
+import type { FSWatcher } from "chokidar";
 import JSON5 from "json5";
 import { Low } from "lowdb";
 import type { Adapter } from "lowdb";
@@ -209,16 +210,31 @@ if (process.env["NODE_ENV"] !== "production") {
     }
     hadReadError = false;
   };
-  watch(file).on("change", () => {
+  let watcherError = false;
+  const watcher: FSWatcher = watch(file, {
+    awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 },
+  });
+  
+  watcher.on("change", () => {
     // Do no reload if the file is being written to by the app
     if (!writing) {
+      if (watcherError) {
+        console.log("Attempting to recover from watcher error...");
+        watcherError = false;
+      }
       db.read().catch((e) => {
         if (e instanceof SyntaxError) {
           hadReadError = true;
           return console.log(chalk.red(["", `Error parsing ${file}`, e.message].join("\n")));
         }
         console.log(e);
+        watcherError = true;
       });
     }
+  });
+  
+  watcher.on("error", (error) => {
+    console.error("File watcher error:", error);
+    watcherError = true;
   });
 }
