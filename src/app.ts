@@ -26,9 +26,15 @@ const eta = new Eta({
 })
 
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
+const MAX_WHERE_JSON_SIZE = 10000 // 10KB limit
+const MAX_QUERY_STRING_SIZE = 20000 // 20KB limit
 
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
+  if (queryString.length > MAX_QUERY_STRING_SIZE) {
+    console.warn('[security] Query string exceeds size limit')
+    throw new Error('Query string too large')
+  }
   const params = new URLSearchParams(queryString)
 
   const filterParams = new URLSearchParams()
@@ -41,6 +47,11 @@ function parseListParams(req: any) {
   let where = parseWhere(filterParams.toString())
   const rawWhere = params.get('_where')
   if (typeof rawWhere === 'string') {
+    // Validate _where payload size
+    if (rawWhere.length > MAX_WHERE_JSON_SIZE) {
+      console.warn('[security] _where parameter exceeds size limit')
+      return { where: {}, sort: undefined, page: undefined, perPage: undefined, embed: undefined }
+    }
     try {
       const parsed = JSON.parse(rawWhere)
       if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
