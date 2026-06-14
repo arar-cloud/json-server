@@ -293,7 +293,24 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     next && next()
   })
   
+  // Apply JSON parser without custom reviver to prevent arbitrary code execution
+  // milliparsec json() by default uses standard JSON.parse without revivers
   app.use(json())
+  
+  // Post-JSON validation: ensure no prototype pollution or reserved key injection
+  app.use((req, res, next) => {
+    if (typeof req.body === 'object' && req.body !== null) {
+      // Reject if body has __proto__, constructor, or prototype properties
+      const hasProtoPollution = ['__proto__', 'constructor', 'prototype'].some(
+        (key) => key in req.body
+      )
+      if (hasProtoPollution) {
+        console.warn('[security] Prototype pollution attempt detected in request body')
+        return res.status(400).json({ error: 'Invalid request body' })
+      }
+    }
+    next && next()
+  })
 
   // Authentication middleware (configurable via AUTH_ENABLED env var)
   const AUTH_ENABLED = process.env.AUTH_ENABLED === 'true'
