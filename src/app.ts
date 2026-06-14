@@ -166,6 +166,38 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   // Body parser
   app.use(json())
 
+  // Authentication middleware (configurable via AUTH_ENABLED env var)
+  const AUTH_ENABLED = process.env.AUTH_ENABLED === 'true'
+  const VALID_API_KEYS = process.env.API_KEYS
+    ? process.env.API_KEYS.split(',')
+    : []
+
+  if (AUTH_ENABLED) {
+    app.use((req, res, next) => {
+      // Allow public endpoints (health check, etc.)
+      if (req.path === '/health' || req.path === '/') {
+        return next()
+      }
+
+      // Check for Authorization header or x-api-key
+      const authHeader = req.headers.authorization
+      const apiKey = req.headers['x-api-key'] as string | undefined
+
+      // Validate Bearer token or API key
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.slice(7)
+        if (VALID_API_KEYS.includes(token)) {
+          return next()
+        }
+      } else if (apiKey && VALID_API_KEYS.includes(apiKey)) {
+        return next()
+      }
+
+      console.warn('[security] Unauthorized request:', req.method, req.path)
+      res.status(401).json({ error: 'Unauthorized' })
+    })
+  }
+
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
 
   app.get('/:name', (req, res, next) => {
