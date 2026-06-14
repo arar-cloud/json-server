@@ -13,19 +13,24 @@ import type { Data } from './service.ts'
 import { isItem, Service } from './service.ts'
 
 const MAX_JSON_DEPTH = 50
+const VISITED_OBJECTS = new WeakSet<object>()
 
-function validateJsonDepth(obj: unknown, currentDepth: number = 0): void {
+function validateJsonDepth(obj: unknown, currentDepth: number = 0, visited: WeakSet<object> = VISITED_OBJECTS): void {
   if (currentDepth > MAX_JSON_DEPTH) {
     throw new Error(`JSON nesting depth exceeds maximum allowed (${MAX_JSON_DEPTH})`)
   }
   if (typeof obj === 'object' && obj !== null) {
+    if (visited.has(obj)) {
+      throw new Error('Circular reference detected in JSON payload')
+    }
+    visited.add(obj)
     if (Array.isArray(obj)) {
       for (const item of obj) {
-        validateJsonDepth(item, currentDepth + 1)
+        validateJsonDepth(item, currentDepth + 1, visited)
       }
     } else {
       for (const value of Object.values(obj)) {
-        validateJsonDepth(value, currentDepth + 1)
+        validateJsonDepth(value, currentDepth + 1, visited)
       }
     }
   }
