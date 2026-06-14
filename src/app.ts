@@ -47,10 +47,13 @@ const eta = new Eta({
 function asyncHandler(fn: (req: any, res: any, next?: any) => Promise<void>): (req: any, res: any, next?: any) => void {
   return (req, res, next) => {
     Promise.resolve(fn(req, res, next)).catch((error) => {
-      console.error('Async route error:', error)
+      const errMsg = error instanceof Error ? error.message : String(error)
+      console.error(`Async route error [${req.method} ${req.url}]:`, errMsg, error instanceof Error ? error.stack : '')
       if (!res.headersSent) {
         res.status(500)
-        res.json({ error: 'Internal server error' })
+        res.json({ error: 'Internal server error', details: errMsg })
+      } else {
+        console.error('Headers already sent, response state is inconsistent')
       }
     })
   }
