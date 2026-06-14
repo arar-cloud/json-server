@@ -13,6 +13,13 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
+// Allowed operators for filtering - explicit allowlist to prevent bypass
+const ALLOWED_OPERATORS = new Set<WhereOperator>(['eq', 'lt', 'lte', 'gt', 'gte', 'ne', 'in', 'regex', 'search'])
+
+function isValidOperator(op: unknown): op is WhereOperator {
+  return typeof op === 'string' && ALLOWED_OPERATORS.has(op as WhereOperator)
+}
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   // Validate input is a string to prevent prototype pollution
   if (typeof key !== 'string' || key.length === 0) {
@@ -27,8 +34,8 @@ function splitKey(key: string): { path: string; op: WhereOperator | null } {
       return { path: key, op: 'eq' }
     }
 
-    // Strict validation: only accept if op is a known operator
-    if (isWhereOperator(op)) {
+    // Strict validation: only accept if op is a known and allowed operator
+    if (isValidOperator(op)) {
       return { path, op }
     }
     // Reject unknown operators
@@ -40,7 +47,7 @@ function splitKey(key: string): { path: string; op: WhereOperator | null } {
   if (underscoreMatch) {
     const path = underscoreMatch[1]
     const op = underscoreMatch[2]
-    if (path && isWhereOperator(op)) {
+    if (path && isValidOperator(op)) {
       return { path, op }
     }
   }

@@ -173,19 +173,15 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
 
   app
     .use((req, res, next) => {
+      const origin = req.headers['origin']
+      const isAllowed = !origin || corsOriginAllowlist.includes(origin)
+      if (!isAllowed) {
+        console.warn('[security] CORS origin rejected:', origin)
+        res.status(403).json({ error: 'CORS policy violation' })
+        return
+      }
       return cors({
-        origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-          // Allow requests with no origin (same-site requests, mobile apps, etc.)
-          if (!origin) {
-            return callback(null, true)
-          }
-          if (corsOriginAllowlist.includes(origin)) {
-            callback(null, true)
-          } else {
-            console.warn('[security] CORS origin rejected:', origin)
-            callback(new Error('CORS policy violation'))
-          }
-        },
+        origin: isAllowed ? (origin ?? true) : false,
         credentials: true,
         allowedHeaders: req.headers['access-control-request-headers']
           ?.split(',')
