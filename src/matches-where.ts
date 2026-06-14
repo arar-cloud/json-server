@@ -24,6 +24,10 @@ function isJSONObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+function isWhereOperator(operator: string): operator is WhereOperator {
+  return Object.prototype.hasOwnProperty.call(WHERE_OPERATORS, operator)
+}
+
 function getKnownOperators(value: unknown): WhereOperator[] {
   if (!isJSONObject(value)) return []
 
@@ -68,6 +72,14 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
 
       if (knownOps.length > 0) {
         if (field === undefined) return false
+
+        // Strict validation: verify all operators are whitelisted
+        for (const op of knownOps) {
+          if (!isWhereOperator(op)) {
+            console.warn('[security] Unauthorized operator in filter:', op)
+            return false
+          }
+        }
 
         const op = value as OperatorObject
         if (knownOps.includes('lt') && !((field as any) < (op.lt as any))) return false
