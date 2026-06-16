@@ -60,9 +60,14 @@ export function parseWhere(query: string): JsonObject {
   const params = new URLSearchParams(query)
 
   for (const [rawKey, rawValue] of params.entries()) {
-    const { path, op } = splitKey(rawKey)
-    if (op === null) continue
-    setPathOp(out, path, op, rawValue)
+    try {
+      const { path, op } = splitKey(rawKey)
+      if (op === null) continue
+      setPathOp(out, path, op, rawValue)
+    } catch (error) {
+      console.warn(`Failed to parse where clause for key '${rawKey}':`, error)
+      continue
+    }
   }
 
   return out
