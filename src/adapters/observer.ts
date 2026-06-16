@@ -22,15 +22,29 @@ export class Observer<T> {
   }
 
   async read() {
-    this.onReadStart()
-    const data = await this.#adapter.read()
-    this.onReadEnd(data)
-    return data
+    try {
+      this.onReadStart()
+      const data = await this.#adapter.read()
+      this.onReadEnd(data)
+      return data
+    } catch (error) {
+      console.error('Observer read error:', error)
+      this.onReadEnd(null)
+      throw error
+    }
   }
 
   async write(arg: T) {
-    this.onWriteStart()
-    await this.#adapter.write(arg)
-    this.onWriteEnd()
+    if (arg === null || arg === undefined) {
+      throw new Error('Cannot write null or undefined data')
+    }
+    try {
+      this.onWriteStart()
+      await this.#adapter.write(arg)
+      this.onWriteEnd()
+    } catch (error) {
+      console.error('Observer write error:', error)
+      throw error
+    }
   }
 }
