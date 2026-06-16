@@ -28,7 +28,13 @@ const eta = new Eta({
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
 
 function parseListParams(req: any) {
-  const queryString = req.url.split('?')[1] ?? ''
+  let queryString = ''
+  try {
+    const urlParts = req.url.split('?')
+    queryString = urlParts.length > 1 ? urlParts[1] : ''
+  } catch (error) {
+    queryString = ''
+  }
   const params = new URLSearchParams(queryString)
 
   const filterParams = new URLSearchParams()
