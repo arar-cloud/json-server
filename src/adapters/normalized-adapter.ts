@@ -16,11 +16,12 @@ export class NormalizedAdapter implements Adapter<Data> {
   }
 
   async read(): Promise<Data | null> {
-    const data = await this.#adapter.read()
+    try {
+      const data = await this.#adapter.read()
 
-    if (data === null) {
-      return null
-    }
+      if (data === null || data === undefined) {
+        return null
+      }
 
     delete data['$schema']
 
@@ -39,9 +40,21 @@ export class NormalizedAdapter implements Adapter<Data> {
     }
 
     return data as Data
+    } catch (error) {
+      console.error('Error reading from adapter:', error)
+      return null
+    }
   }
 
   async write(data: Data): Promise<void> {
-    await this.#adapter.write({ ...data, $schema: DEFAULT_SCHEMA_PATH })
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid data format for write operation')
+    }
+    try {
+      await this.#adapter.write({ ...data, $schema: DEFAULT_SCHEMA_PATH })
+    } catch (error) {
+      console.error('Error writing to adapter:', error)
+      throw error
+    }
   }
 }
