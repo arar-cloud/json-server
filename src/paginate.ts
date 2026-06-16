@@ -11,8 +11,13 @@ export type PaginationResult<T> = {
 export function paginate<T>(items: T[], page: number, perPage: number): PaginationResult<T> {
   if (!Array.isArray(items) || page < 1 || perPage < 1) {
     return {
+      first: 1,
+      prev: null,
+      next: null,
+      last: 1,
+      pages: 1,
+      items: Array.isArray(items) ? items.length : 0,
       data: [],
-      total: Array.isArray(items) ? items.length : 0,
     }
   }
   const totalItems = items.length
