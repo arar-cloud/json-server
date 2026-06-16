@@ -22,6 +22,8 @@ function getKnownOperators(value: unknown): WhereOperator[] {
 }
 
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
+  if (!obj || !where) return false
+  
   for (const [key, value] of Object.entries(where)) {
     if (key === 'or') {
       if (!Array.isArray(value) || value.length === 0) return false
