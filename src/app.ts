@@ -157,7 +157,7 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
       clearTimeout(timeoutId)
     })
     
-    next()
+    next?.()
   })
   
   // Validate Content-Type before processing request bodies
@@ -171,15 +171,15 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
       })
       req.on('end', () => {
         req.body = {}
-        next()
+        next?.()
       })
       req.on('error', (error) => {
         console.error('Request stream error:', error)
         req.body = {}
-        next()
+        next?.()
       })
     } else {
-      next()
+      next?.()
     }
   })
 

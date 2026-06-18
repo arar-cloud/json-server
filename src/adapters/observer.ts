@@ -22,15 +22,36 @@ export class Observer<T> {
   }
 
   async read() {
-    this.onReadStart()
+    try {
+      this.onReadStart()
+    } catch (error) {
+      console.error('Error in onReadStart callback:', error)
+    }
+    
     const data = await this.#adapter.read()
-    this.onReadEnd(data)
+    
+    try {
+      this.onReadEnd(data)
+    } catch (error) {
+      console.error('Error in onReadEnd callback:', error)
+    }
+    
     return data
   }
 
   async write(arg: T) {
-    this.onWriteStart()
+    try {
+      this.onWriteStart()
+    } catch (error) {
+      console.error('Error in onWriteStart callback:', error)
+    }
+    
     await this.#adapter.write(arg)
-    this.onWriteEnd()
+    
+    try {
+      this.onWriteEnd()
+    } catch (error) {
+      console.error('Error in onWriteEnd callback:', error)
+    }
   }
 }
