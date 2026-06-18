@@ -56,13 +56,31 @@ function coerceValue(value: string): string | number | boolean | null {
 }
 
 export function parseWhere(query: string): JsonObject {
-  const out: JsonObject = {}
-  const params = new URLSearchParams(query)
+  if (!query || typeof query !== 'string') {
+    return {}
+  }
 
-  for (const [rawKey, rawValue] of params.entries()) {
-    const { path, op } = splitKey(rawKey)
-    if (op === null) continue
-    setPathOp(out, path, op, rawValue)
+  const out: JsonObject = {}
+  
+  try {
+    const params = new URLSearchParams(query)
+
+    for (const [rawKey, rawValue] of params.entries()) {
+      if (!rawKey || typeof rawKey !== 'string') continue
+      
+      const { path, op } = splitKey(rawKey)
+      if (op === null) continue
+      
+      try {
+        setPathOp(out, path, op, rawValue)
+      } catch (error) {
+        console.error(`Error processing filter key '${rawKey}':`, error)
+        continue
+      }
+    }
+  } catch (error) {
+    console.error('Error parsing query parameters:', error)
+    return {}
   }
 
   return out
