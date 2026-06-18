@@ -29,7 +29,13 @@ const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_
 
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
-  const params = new URLSearchParams(queryString)
+  let params
+  try {
+    params = new URLSearchParams(queryString)
+  } catch (error) {
+    console.error('Error parsing query string:', error)
+    params = new URLSearchParams()
+  }
 
   const filterParams = new URLSearchParams()
   for (const [key, value] of params.entries()) {
@@ -46,8 +52,9 @@ function parseListParams(req: any) {
       if (typeof parsed === 'object' && parsed !== null) {
         where = parsed
       }
-    } catch {
+    } catch (error) {
       // Ignore invalid JSON and fallback to parsed query params
+      console.error('Error parsing _where parameter:', error)
     }
   }
 
