@@ -10,7 +10,8 @@ export type PaginationResult<T> = {
 
 export function paginate<T>(items: T[], page: number, perPage: number): PaginationResult<T> {
   const totalItems = items.length
-  const safePerPage = Number.isFinite(perPage) && perPage > 0 ? Math.floor(perPage) : 1
+  const MAX_PER_PAGE = 100000 // Prevent extreme memory allocation
+  const safePerPage = Number.isFinite(perPage) && perPage > 0 ? Math.min(Math.floor(perPage), MAX_PER_PAGE) : 1
   const pages = Math.max(1, Math.ceil(totalItems / safePerPage))
 
   // Ensure page is within the valid range
