@@ -89,6 +89,14 @@ function withIdAndBody(
 ) {
   return async (req: any, res: any, next: any) => {
     const { name = '', id = '' } = req.params
+    
+    // Validate Content-Type header
+    const contentType = req.get('content-type')
+    if (contentType && !contentType.includes('application/json')) {
+      res.status(400).json({ error: 'Content-Type must be application/json' })
+      return
+    }
+    
     if (!isItem(req.body)) {
       res.status(400).json({ error: 'Body must be a JSON object' })
       return
