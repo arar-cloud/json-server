@@ -143,14 +143,24 @@ export class Service {
   }
 
   async create(name: string, data: Omit<Item, 'id'> = {}): Promise<Item | undefined> {
-    const items = this.#get(name)
-    if (items === undefined || !Array.isArray(items)) return
+    try {
+      const items = this.#get(name)
+      if (items === undefined || !Array.isArray(items)) return
 
-    const item = { ...data, id: randomId() }
-    items.push(item)
+      const item = { ...data, id: randomId() }
+      items.push(item)
 
-    await this.#db.write()
-    return item
+      // Validate write consistency
+      if (items[items.length - 1]?.id !== item.id) {
+        throw new Error('Data consistency check failed after create')
+      }
+
+      await this.#db.write()
+      return item
+    } catch (error) {
+      console.error(`Error creating item in '${name}':`, error)
+      throw error
+    }
   }
 
   async #updateOrPatch(name: string, body: Item = {}, isPatch: boolean): Promise<Item | undefined> {
@@ -169,18 +179,28 @@ export class Service {
     body: Item = {},
     isPatch: boolean,
   ): Promise<Item | undefined> {
-    const items = this.#get(name)
-    if (items === undefined || !Array.isArray(items)) return
+    try {
+      const items = this.#get(name)
+      if (items === undefined || !Array.isArray(items)) return
 
-    const item = items.find((item) => item['id'] === id)
-    if (!item) return
+      const item = items.find((item) => item['id'] === id)
+      if (!item) return
 
-    const nextItem = isPatch ? { ...item, ...body, id } : { ...body, id }
-    const index = items.indexOf(item)
-    items.splice(index, 1, nextItem)
+      const nextItem = isPatch ? { ...item, ...body, id } : { ...body, id }
+      const index = items.indexOf(item)
+      items.splice(index, 1, nextItem)
 
-    await this.#db.write()
-    return nextItem
+      // Validate write consistency
+      if (items[index]?.id !== nextItem.id) {
+        throw new Error('Data consistency check failed after update')
+      }
+
+      await this.#db.write()
+      return nextItem
+    } catch (error) {
+      console.error(`Error updating item '${id}' in '${name}':`, error)
+      throw error
+    }
   }
 
   async update(name: string, body: Item = {}): Promise<Item | undefined> {
