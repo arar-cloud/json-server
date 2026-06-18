@@ -124,6 +124,29 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
 
   // Body parser
   app.use(json())
+  
+  // Validate Content-Type before processing request bodies
+  app.use((req, res, next) => {
+    const contentType = req.get('content-type')
+    if (contentType && !contentType.includes('application/json')) {
+      // Drain the request stream for non-JSON content types
+      let data = ''
+      req.on('data', (chunk) => {
+        data += chunk
+      })
+      req.on('end', () => {
+        req.body = {}
+        next()
+      })
+      req.on('error', (error) => {
+        console.error('Request stream error:', error)
+        req.body = {}
+        next()
+      })
+    } else {
+      next()
+    }
+  })
 
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
 
