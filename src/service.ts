@@ -224,19 +224,33 @@ export class Service {
     id: string,
     dependent?: string | string[],
   ): Promise<Item | undefined> {
-    const items = this.#get(name)
-    if (items === undefined || !Array.isArray(items)) return
+    try {
+      if (!this.#db.data || typeof this.#db.data !== 'object') {
+        throw new Error('Database is not initialized')
+      }
 
-    const item = items.find((item) => item['id'] === id)
-    if (item === undefined) return
-    const index = items.indexOf(item)
-    items.splice(index, 1)
+      const items = this.#get(name)
+      if (items === undefined || !Array.isArray(items)) return
 
-    nullifyForeignKey(this.#db, name, id)
-    const dependents = ensureArray(dependent)
-    deleteDependents(this.#db, name, dependents)
+      const item = items.find((item) => item['id'] === id)
+      if (item === undefined) return
+      const index = items.indexOf(item)
+      items.splice(index, 1)
 
-    await this.#db.write()
-    return item
+      // Validate delete consistency
+      if (items.some((i) => String(i['id']) === id)) {
+        throw new Error('Data consistency check failed: Item still exists after delete')
+      }
+
+      nullifyForeignKey(this.#db, name, id)
+      const dependents = ensureArray(dependent)
+      deleteDependents(this.#db, name, dependents)
+
+      await this.#db.write()
+      return item
+    } catch (error) {
+      console.error(`Error deleting item '${id}' from '${name}':`, error)
+      throw error
+    }
   }
 }
