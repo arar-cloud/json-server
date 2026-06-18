@@ -23,6 +23,18 @@ function getKnownOperators(value: unknown): WhereOperator[] {
 
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
   for (const [key, value] of Object.entries(where)) {
+    // Skip logical operators for 'and' support
+    if (key === 'and') {
+      if (!Array.isArray(value) || value.length === 0) return false
+
+      for (const subWhere of value) {
+        if (!isJSONObject(subWhere) || !matchesWhere(obj, subWhere)) {
+          return false
+        }
+      }
+      continue
+    }
+
     if (key === 'or') {
       if (!Array.isArray(value) || value.length === 0) return false
 
@@ -81,7 +93,7 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
 
     if (field === undefined) return false
 
-    return false
+    if (field !== value) return false
   }
 
   return true
