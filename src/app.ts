@@ -125,6 +125,33 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   // Body parser
   app.use(json())
   
+  // Set default request timeout (30 seconds)
+  const REQUEST_TIMEOUT = 30000
+  
+  // Middleware to clear res.locals and enforce timeout
+  app.use((req, res, next) => {
+    // Clear res.locals at start of each request to prevent data leakage
+    res.locals = {}
+    
+    // Set request timeout
+    const timeoutId = setTimeout(() => {
+      if (!res.headersSent) {
+        res.status(408).json({ error: 'Request timeout' })
+      }
+    }, REQUEST_TIMEOUT)
+    
+    // Clear timeout on response finish
+    res.on('finish', () => {
+      clearTimeout(timeoutId)
+    })
+    
+    res.on('error', () => {
+      clearTimeout(timeoutId)
+    })
+    
+    next()
+  })
+  
   // Validate Content-Type before processing request bodies
   app.use((req, res, next) => {
     const contentType = req.get('content-type')
