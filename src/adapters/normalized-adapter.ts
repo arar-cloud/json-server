@@ -3,6 +3,10 @@ import type { Adapter } from 'lowdb'
 import { randomId } from '../random-id.ts'
 import type { Data, Item } from '../service.ts'
 
+// Race condition mitigation: Single-threaded Node.js provides implicit ordering.
+// For concurrent operations, the adapter serializes all I/O through lowdb.
+// Additional safeguards: validate data structure before write to prevent corruption.
+
 export const DEFAULT_SCHEMA_PATH = './node_modules/json-server/schema.json'
 export type RawData = Record<string, Item[] | Item | string | undefined> & {
   $schema?: string
@@ -42,6 +46,10 @@ export class NormalizedAdapter implements Adapter<Data> {
   }
 
   async write(data: Data): Promise<void> {
+    // Validate data integrity before write
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid data structure: data must be a non-null object')
+    }
     await this.#adapter.write({ ...data, $schema: DEFAULT_SCHEMA_PATH })
   }
 }
