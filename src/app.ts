@@ -27,6 +27,15 @@ const eta = new Eta({
 
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
 
+// Standardized error response
+function sendError(res: any, statusCode: number, message: string, details?: unknown): void {
+  const errorResponse = {
+    error: message,
+    ...(details && { details }),
+  }
+  res.status(statusCode).json(errorResponse)
+}
+
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
   const params = new URLSearchParams(queryString)
@@ -197,7 +206,21 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
       res.status(404).json({ error: 'Not Found' })
     } else {
       if (req.method === 'POST') res.status(201)
-      res.json(data)
+      try {
+        res.json(data)
+      } catch (error) {
+        const err = error instanceof Error ? error.message : String(error)
+        if (err.includes('not found')) {
+          sendError(res, 404, 'Not found')
+        } else if (err.includes('already exists')) {
+          sendError(res, 409, 'Resource already exists')
+        } else if (err.includes('validation') || err.includes('Invalid')) {
+          sendError(res, 422, 'Unprocessable entity', err)
+        } else {
+          console.error(`[json-server] Unhandled error: ${err}`)
+          sendError(res, 500, 'Internal server error')
+        }
+      }
     }
   })
 
