@@ -46,8 +46,9 @@ function parseListParams(req: any) {
       if (typeof parsed === 'object' && parsed !== null) {
         where = parsed
       }
-    } catch {
-      // Ignore invalid JSON and fallback to parsed query params
+    } catch (e) {
+      const err = e instanceof Error ? e.message : String(e)
+      console.warn(`[json-server] Failed to parse _where query parameter: ${err}`)
     }
   }
 
