@@ -162,6 +162,25 @@ function randomItem(items: string[]): string {
   return items.at(index) ?? "";
 }
 
+// Register graceful shutdown handlers
+const gracefulShutdown = async () => {
+  console.log('\n[json-server] Received shutdown signal, closing gracefully...');
+  try {
+    // Flush any pending database writes
+    if (db && typeof (db as any).write === 'function') {
+      await (db as any).write();
+    }
+    process.exit(0);
+  } catch (error) {
+    const err = error instanceof Error ? error.message : String(error);
+    console.error(`[json-server] Shutdown error: ${err}`);
+    process.exit(1);
+  }
+};
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+
 app.listen(port, () => {
   console.log(
     [
