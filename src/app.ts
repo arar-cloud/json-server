@@ -31,7 +31,7 @@ const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_
 function sendError(res: any, statusCode: number, message: string, details?: unknown): void {
   const errorResponse = {
     error: message,
-    ...(details && { details }),
+    ...(details !== undefined ? { details } : {}),
   }
   res.status(statusCode).json(errorResponse)
 }
@@ -158,7 +158,7 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
         return originalOn(event, listener)
       }
     }
-    next()
+    next?.()
   })
   app.use(json())
 
