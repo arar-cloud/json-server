@@ -22,15 +22,40 @@ export class Observer<T> {
   }
 
   async read() {
-    this.onReadStart()
+    try {
+      this.onReadStart()
+    } catch (error) {
+      const err = error instanceof Error ? error.message : String(error)
+      console.error(`[json-server] Observer onReadStart failed: ${err}`)
+    }
+    
     const data = await this.#adapter.read()
-    this.onReadEnd(data)
+    
+    try {
+      this.onReadEnd(data)
+    } catch (error) {
+      const err = error instanceof Error ? error.message : String(error)
+      console.error(`[json-server] Observer onReadEnd failed: ${err}`)
+    }
+    
     return data
   }
 
   async write(arg: T) {
-    this.onWriteStart()
+    try {
+      this.onWriteStart()
+    } catch (error) {
+      const err = error instanceof Error ? error.message : String(error)
+      console.error(`[json-server] Observer onWriteStart failed: ${err}`)
+    }
+    
     await this.#adapter.write(arg)
-    this.onWriteEnd()
+    
+    try {
+      this.onWriteEnd()
+    } catch (error) {
+      const err = error instanceof Error ? error.message : String(error)
+      console.error(`[json-server] Observer onWriteEnd failed: ${err}`)
+    }
   }
 }
