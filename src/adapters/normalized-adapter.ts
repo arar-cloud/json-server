@@ -42,6 +42,14 @@ export class NormalizedAdapter implements Adapter<Data> {
   }
 
   async write(data: Data): Promise<void> {
-    await this.#adapter.write({ ...data, $schema: DEFAULT_SCHEMA_PATH })
+    try {
+      // Write with error handling to prevent mid-operation data corruption
+      await this.#adapter.write({ ...data, $schema: DEFAULT_SCHEMA_PATH })
+    } catch (error) {
+      // Log write failure for observability
+      const err = error instanceof Error ? error.message : String(error)
+      console.error(`[json-server] Adapter write failed: ${err}`)
+      throw error
+    }
   }
 }
