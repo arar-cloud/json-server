@@ -1,6 +1,6 @@
 import type { JsonObject } from 'type-fest'
 
-import { WHERE_OPERATORS, type WhereOperator } from './where-operators.ts'
+import { WHERE_OPERATORS, type WhereOperator, safeCompare } from './where-operators.ts'
 
 type OperatorObject = Partial<Record<WhereOperator, unknown>>
 
@@ -47,15 +47,16 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
         if (field === undefined) return false
 
         const op = value as OperatorObject
-        if (knownOps.includes('lt') && !((field as any) < (op.lt as any))) return false
-        if (knownOps.includes('lte') && !((field as any) <= (op.lte as any))) return false
-        if (knownOps.includes('gt') && !((field as any) > (op.gt as any))) return false
-        if (knownOps.includes('gte') && !((field as any) >= (op.gte as any))) return false
-        if (knownOps.includes('eq') && !((field as any) === (op.eq as any))) return false
-        if (knownOps.includes('ne') && !((field as any) !== (op.ne as any))) return false
+        if (knownOps.includes('lt') && !safeCompare(field, op.lt, 'lt')) return false
+        if (knownOps.includes('lte') && !safeCompare(field, op.lte, 'lte')) return false
+        if (knownOps.includes('gt') && !safeCompare(field, op.gt, 'gt')) return false
+        if (knownOps.includes('gte') && !safeCompare(field, op.gte, 'gte')) return false
+        if (knownOps.includes('eq') && !(field === op.eq)) return false
+        if (knownOps.includes('ne') && !(field !== op.ne)) return false
         if (knownOps.includes('in')) {
+          if (field === null || field === undefined) return false
           const inValues = Array.isArray(op.in) ? op.in : [op.in]
-          if (!inValues.some((v) => (field as any) === (v as any))) return false
+          if (!inValues.some((v) => field === v)) return false
         }
         if (knownOps.includes('contains')) {
           if (typeof field !== 'string') return false
