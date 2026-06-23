@@ -72,6 +72,8 @@ function parseListParams(req: any) {
   }
 }
 
+const MAX_BODY_SIZE_BYTES = 1024 * 1024 // 1MB limit
+
 function withBody(action: (name: string, body: Record<string, unknown>) => Promise<unknown>) {
   return async (req: any, res: any, next: any) => {
     const { name = '' } = req.params
@@ -122,7 +124,33 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     })
     .options('*', cors())
 
-  // Body parser
+  // Body parser with size validation
+  app.use((req, res, next) => {
+    if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'PUT') {
+      const contentType = req.headers['content-type'] || ''
+      if (!contentType.includes('application/json')) {
+        res.status(400).json({ error: 'Content-Type must be application/json' })
+        return
+      }
+      let size = 0
+      const originalOn = req.on.bind(req)
+      req.on = function(event: string, listener: any) {
+        if (event === 'data') {
+          return originalOn(event, (chunk: Buffer) => {
+            size += chunk.length
+            if (size > MAX_BODY_SIZE_BYTES) {
+              res.status(413).json({ error: 'Payload too large' })
+              req.pause()
+              return
+            }
+            listener(chunk)
+          })
+        }
+        return originalOn(event, listener)
+      }
+    }
+    next()
+  })
   app.use(json())
 
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
