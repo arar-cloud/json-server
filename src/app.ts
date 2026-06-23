@@ -53,14 +53,20 @@ function parseListParams(req: any) {
 
   const pageRaw = params.get('_page')
   const perPageRaw = params.get('_per_page')
-  const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
-  const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
+  const pageNum = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
+  const perPageNum = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
+  
+  // Validate page: must be >= 1, reject negative or NaN values
+  const page = pageNum !== undefined && Number.isFinite(pageNum) && pageNum >= 1 ? Math.floor(pageNum) : undefined
+  
+  // Validate perPage: must be >= 1 and <= 1000, reject negative, zero, or NaN values
+  const perPage = perPageNum !== undefined && Number.isFinite(perPageNum) && perPageNum >= 1 ? Math.min(Math.floor(perPageNum), 1000) : undefined
 
   return {
     where,
     sort: params.get('_sort') ?? undefined,
-    page: Number.isNaN(page) ? undefined : page,
-    perPage: Number.isNaN(perPage) ? undefined : perPage,
+    page,
+    perPage,
     embed: req.query['_embed'],
   }
 }
