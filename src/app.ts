@@ -72,6 +72,17 @@ function withBody(action: (name: string, body: Record<string, unknown>) => Promi
       res.status(400).json({ error: 'Body must be a JSON object' })
       return
     }
+    // Validate nested depth to prevent deeply nested payloads
+    const maxDepth = 10
+    function checkDepth(obj: any, depth = 0): boolean {
+      if (depth > maxDepth) return false
+      if (typeof obj !== 'object' || obj === null) return true
+      return Object.values(obj).every(v => checkDepth(v, depth + 1))
+    }
+    if (!checkDepth(req.body)) {
+      res.status(400).json({ error: 'Payload nesting too deep' })
+      return
+    }
     res.locals['data'] = await action(name, req.body)
     next?.()
   }
@@ -116,7 +127,7 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     .options('*', cors())
 
   // Body parser
-  app.use(json())
+  app.use(json({ limit: '100kb' }))
 
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
 
