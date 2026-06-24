@@ -11,7 +11,7 @@ export type RawData = Record<string, Item[] | Item | string | undefined> & {
 export class NormalizedAdapter implements Adapter<Data> {
   #adapter: Adapter<RawData>
   readonly #MAX_RECURSION_DEPTH = 100
-  readonly #visitedRefs = new WeakSet<object>()
+  #visitedRefs = new WeakSet<object>()
 
   constructor(adapter: Adapter<RawData>) {
     this.#adapter = adapter
@@ -33,7 +33,7 @@ export class NormalizedAdapter implements Adapter<Data> {
     }
 
     delete data['$schema']
-    this.#visitedRefs.clear()
+    this.#visitedRefs = new WeakSet<object>()
 
     for (const value of Object.values(data)) {
       if (!this.#validateDepth(value)) {
