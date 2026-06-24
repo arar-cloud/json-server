@@ -10,9 +10,19 @@ export type RawData = Record<string, Item[] | Item | string | undefined> & {
 
 export class NormalizedAdapter implements Adapter<Data> {
   #adapter: Adapter<RawData>
+  readonly #MAX_RECURSION_DEPTH = 100
+  readonly #visitedRefs = new WeakSet<object>()
 
   constructor(adapter: Adapter<RawData>) {
     this.#adapter = adapter
+  }
+
+  #validateDepth(obj: unknown, depth: number = 0): boolean {
+    if (depth > this.#MAX_RECURSION_DEPTH) return false
+    if (typeof obj !== 'object' || obj === null) return true
+    if (this.#visitedRefs.has(obj as object)) return false
+    this.#visitedRefs.add(obj as object)
+    return true
   }
 
   async read(): Promise<Data | null> {
@@ -23,8 +33,12 @@ export class NormalizedAdapter implements Adapter<Data> {
     }
 
     delete data['$schema']
+    this.#visitedRefs.clear()
 
     for (const value of Object.values(data)) {
+      if (!this.#validateDepth(value)) {
+        throw new Error('Circular reference or excessive nesting detected')
+      }
       if (Array.isArray(value)) {
         for (const item of value) {
           if (typeof item['id'] === 'number') {
