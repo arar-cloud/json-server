@@ -146,7 +146,25 @@ export class Service {
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
 
-    const item = { ...data, id: randomId() }
+    let id = randomId()
+    let attempts = 0
+    const maxAttempts = 100
+
+    // Check for ID collision and regenerate if needed
+    while (attempts < maxAttempts) {
+      if (items.some((item) => item.id === id)) {
+        id = randomId()
+        attempts++
+      } else {
+        break
+      }
+    }
+
+    if (attempts >= maxAttempts) {
+      throw new Error('Unable to generate unique ID after maximum attempts')
+    }
+
+    const item = { ...data, id }
     items.push(item)
 
     await this.#db.write()
