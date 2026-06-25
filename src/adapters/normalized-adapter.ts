@@ -44,4 +44,27 @@ export class NormalizedAdapter implements Adapter<Data> {
   async write(data: Data): Promise<void> {
     await this.#adapter.write({ ...data, $schema: DEFAULT_SCHEMA_PATH })
   }
+
+  private deepMerge(target: any, source: any): any {
+    if (!source || typeof source !== 'object') return source
+    if (!target || typeof target !== 'object') return source
+
+    const result = Array.isArray(target) ? [...target] : { ...target }
+
+    for (const key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        const sourceValue = source[key]
+        const targetValue = result[key]
+
+        if (typeof sourceValue === 'object' && sourceValue !== null && !Array.isArray(sourceValue) &&
+            typeof targetValue === 'object' && targetValue !== null && !Array.isArray(targetValue)) {
+          result[key] = this.deepMerge(targetValue, sourceValue)
+        } else {
+          result[key] = sourceValue
+        }
+      }
+    }
+
+    return result
+  }
 }
