@@ -119,15 +119,23 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     .forEach((dir) => app.use(sirv(dir, { dev: !isProduction })))
 
   // CORS
-  app
-    .use((req, res, next) => {
-      return cors({
+  const corsOptions = isProduction
+    ? {
+        origin: process.env['CORS_ORIGIN'] || 'http://localhost:3000',
         allowedHeaders: req.headers['access-control-request-headers']
           ?.split(',')
           .map((h) => h.trim()),
-      })(req, res, next)
+      }
+    : {
+        allowedHeaders: req.headers['access-control-request-headers']
+          ?.split(',')
+          .map((h) => h.trim()),
+      }
+  app
+    .use((req, res, next) => {
+      return cors(corsOptions)(req, res, next)
     })
-    .options('*', cors())
+    .options('*', cors(corsOptions))
 
   // Body parser
   app.use((req, res, next) => {
