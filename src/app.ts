@@ -117,6 +117,10 @@ function withIdAndBody(
       sendError(res, 400, 'INVALID_BODY', 'Body must be a JSON object', { received: typeof req.body })
       return
     }
+    if (!validateItemStructure(req.body)) {
+      sendError(res, 400, 'INVALID_STRUCTURE', 'Item structure exceeds maximum nesting depth', { maxDepth: 50 })
+      return
+    }
     res.locals['data'] = await action(name, id, req.body)
     next?.()
   }
