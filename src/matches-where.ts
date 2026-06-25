@@ -21,14 +21,14 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   return ops
 }
 
-export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
+export function matchesWhere(obj: JsonObject, where: JsonObject, caseInsensitive?: boolean): boolean {
   for (const [key, value] of Object.entries(where)) {
     if (key === 'or') {
       if (!Array.isArray(value) || value.length === 0) return false
 
       let matched = false
       for (const subWhere of value) {
-        if (isJSONObject(subWhere) && matchesWhere(obj, subWhere)) {
+        if (isJSONObject(subWhere) && matchesWhere(obj, subWhere, caseInsensitive)) {
           matched = true
           break
         }
