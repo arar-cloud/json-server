@@ -130,6 +130,16 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     .options('*', cors())
 
   // Body parser
+  app.use((req, res, next) => {
+    if (['POST', 'PUT', 'PATCH'].includes(req.method ?? '')) {
+      const contentType = req.headers['content-type']
+      if (!contentType?.includes('application/json')) {
+        res.status(400).json({ error: 'Content-Type must be application/json' })
+        return
+      }
+    }
+    next?.()
+  })
   app.use(json())
 
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
