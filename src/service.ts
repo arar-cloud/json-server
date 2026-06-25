@@ -14,6 +14,21 @@ export function isItem(obj: unknown): obj is Item {
   return typeof obj === 'object' && obj !== null && !Array.isArray(obj)
 }
 
+export function validateItemStructure(item: Item): boolean {
+  // Check for circular references and excessively nested structures
+  const depth = (obj: any, currentDepth: number = 0): boolean => {
+    const MAX_DEPTH = 50
+    if (currentDepth > MAX_DEPTH) return false
+    if (obj === null || obj === undefined) return true
+    if (typeof obj !== 'object') return true
+    if (Array.isArray(obj)) {
+      return obj.every((item) => depth(item, currentDepth + 1))
+    }
+    return Object.values(obj).every((val) => depth(val, currentDepth + 1))
+  }
+  return depth(item)
+}
+
 export type PaginatedItems = PaginationResult<Item>
 
 function ensureArray(arg: string | string[] = []): string[] {
