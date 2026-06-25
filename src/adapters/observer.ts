@@ -45,7 +45,10 @@ export class Observer<T> {
         subscriber(data)
       } catch (error) {
         // Log error but don't crash: observer errors should not block other subscribers
-        console.error('Observer callback error:', error instanceof Error ? error.message : String(error))
+        console.error(
+          'Observer callback error:',
+          error instanceof Error ? error.message : String(error),
+        )
       }
     }
   }

@@ -33,7 +33,13 @@ type ErrorResponse = {
   context?: Record<string, unknown>
 }
 
-function sendError(res: any, status: number, code: string, message: string, context?: Record<string, unknown>): ErrorResponse {
+function sendError(
+  res: any,
+  status: number,
+  code: string,
+  message: string,
+  context?: Record<string, unknown>,
+): ErrorResponse {
   const response: ErrorResponse = { error: message, code }
   if (context) response.context = context
   res.status(status).json(response)
@@ -96,11 +102,15 @@ function withBody(action: (name: string, body: Record<string, unknown>) => Promi
   return async (req: any, res: any, next: any) => {
     const { name = '' } = req.params
     if (!isItem(req.body)) {
-      sendError(res, 400, 'INVALID_BODY', 'Body must be a JSON object', { received: typeof req.body })
+      sendError(res, 400, 'INVALID_BODY', 'Body must be a JSON object', {
+        received: typeof req.body,
+      })
       return
     }
     if (!validateItemStructure(req.body)) {
-      sendError(res, 400, 'INVALID_STRUCTURE', 'Item structure exceeds maximum nesting depth', { maxDepth: 50 })
+      sendError(res, 400, 'INVALID_STRUCTURE', 'Item structure exceeds maximum nesting depth', {
+        maxDepth: 50,
+      })
       return
     }
     res.locals['data'] = await action(name, req.body)
@@ -114,11 +124,15 @@ function withIdAndBody(
   return async (req: any, res: any, next: any) => {
     const { name = '', id = '' } = req.params
     if (!isItem(req.body)) {
-      sendError(res, 400, 'INVALID_BODY', 'Body must be a JSON object', { received: typeof req.body })
+      sendError(res, 400, 'INVALID_BODY', 'Body must be a JSON object', {
+        received: typeof req.body,
+      })
       return
     }
     if (!validateItemStructure(req.body)) {
-      sendError(res, 400, 'INVALID_STRUCTURE', 'Item structure exceeds maximum nesting depth', { maxDepth: 50 })
+      sendError(res, 400, 'INVALID_STRUCTURE', 'Item structure exceeds maximum nesting depth', {
+        maxDepth: 50,
+      })
       return
     }
     res.locals['data'] = await action(name, id, req.body)

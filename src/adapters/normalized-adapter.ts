@@ -56,8 +56,14 @@ export class NormalizedAdapter implements Adapter<Data> {
         const sourceValue = source[key]
         const targetValue = result[key]
 
-        if (typeof sourceValue === 'object' && sourceValue !== null && !Array.isArray(sourceValue) &&
-            typeof targetValue === 'object' && targetValue !== null && !Array.isArray(targetValue)) {
+        if (
+          typeof sourceValue === 'object' &&
+          sourceValue !== null &&
+          !Array.isArray(sourceValue) &&
+          typeof targetValue === 'object' &&
+          targetValue !== null &&
+          !Array.isArray(targetValue)
+        ) {
           result[key] = this.deepMerge(targetValue, sourceValue)
         } else {
           result[key] = sourceValue
