@@ -110,7 +110,7 @@ function withIdAndBody(
   return async (req: any, res: any, next: any) => {
     const { name = '', id = '' } = req.params
     if (!isItem(req.body)) {
-      res.status(400).json({ error: 'Body must be a JSON object' })
+      sendError(res, 400, 'INVALID_BODY', 'Body must be a JSON object', { received: typeof req.body })
       return
     }
     res.locals['data'] = await action(name, id, req.body)
