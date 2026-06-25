@@ -10,7 +10,7 @@ import sirv from 'sirv'
 
 import { parseWhere } from './parse-where.ts'
 import type { Data } from './service.ts'
-import { isItem, Service } from './service.ts'
+import { isItem, Service, validateItemStructure } from './service.ts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const isProduction = process.env['NODE_ENV'] === 'production'
