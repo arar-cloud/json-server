@@ -53,14 +53,28 @@ function parseListParams(req: any) {
 
   const pageRaw = params.get('_page')
   const perPageRaw = params.get('_per_page')
-  const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
-  const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
+  let page: number | undefined = undefined
+  let perPage: number | undefined = undefined
+
+  if (pageRaw !== null) {
+    const parsed = Number.parseInt(pageRaw, 10)
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      page = parsed
+    }
+  }
+
+  if (perPageRaw !== null) {
+    const parsed = Number.parseInt(perPageRaw, 10)
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      perPage = parsed
+    }
+  }
 
   return {
     where,
     sort: params.get('_sort') ?? undefined,
-    page: Number.isNaN(page) ? undefined : page,
-    perPage: Number.isNaN(perPage) ? undefined : perPage,
+    page,
+    perPage,
     embed: req.query['_embed'],
   }
 }
