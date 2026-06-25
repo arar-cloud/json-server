@@ -27,6 +27,19 @@ const eta = new Eta({
 
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
 
+type ErrorResponse = {
+  error: string
+  code: string
+  context?: Record<string, unknown>
+}
+
+function sendError(res: any, status: number, code: string, message: string, context?: Record<string, unknown>): ErrorResponse {
+  const response: ErrorResponse = { error: message, code }
+  if (context) response.context = context
+  res.status(status).json(response)
+  return response
+}
+
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
   const params = new URLSearchParams(queryString)
