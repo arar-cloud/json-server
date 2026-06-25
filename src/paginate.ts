@@ -10,11 +10,25 @@ export type PaginationResult<T> = {
 
 export function paginate<T>(items: T[], page: number, perPage: number): PaginationResult<T> {
   const totalItems = items.length
-  const safePerPage = Number.isFinite(perPage) && perPage > 0 ? Math.floor(perPage) : 1
+  
+  // Validate boundary conditions: page and perPage must be positive finite numbers
+  if (!Number.isFinite(page) || page < 1 || !Number.isFinite(perPage) || perPage < 1) {
+    return {
+      first: 1,
+      prev: null,
+      next: null,
+      last: 1,
+      pages: 1,
+      items: totalItems,
+      data: [],
+    }
+  }
+  
+  const safePerPage = Math.floor(perPage)
   const pages = Math.max(1, Math.ceil(totalItems / safePerPage))
 
   // Ensure page is within the valid range
-  const safePage = Number.isFinite(page) ? Math.floor(page) : 1
+  const safePage = Math.floor(page)
   const currentPage = Math.max(1, Math.min(safePage, pages))
 
   const first = 1
