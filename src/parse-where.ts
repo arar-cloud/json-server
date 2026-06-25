@@ -29,17 +29,18 @@ function splitKey(key: string): { path: string; op: WhereOperator | null } {
 }
 
 function setPathOp(root: JsonObject, path: string, op: WhereOperator, value: string): void {
+  const decodedValue = decodeValue(value)
   const fullPath = `${path}.${op}`
   if (op === 'in') {
     setProperty(
       root,
       fullPath,
-      value.split(',').map((part) => coerceValue(part.trim())),
+      decodedValue.split(',').map((part) => coerceValue(part.trim())),
     )
     return
   }
 
-  setProperty(root, fullPath, coerceValue(value))
+  setProperty(root, fullPath, coerceValue(decodedValue))
 }
 
 function coerceValue(value: string): string | number | boolean | null {
@@ -53,6 +54,14 @@ function coerceValue(value: string): string | number | boolean | null {
   if (Number.isFinite(num)) return num
 
   return value
+}
+
+function decodeValue(value: string): string {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
 }
 
 export function parseWhere(query: string): JsonObject {
