@@ -1,5 +1,6 @@
-import { randomBytes } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 
 export function randomId(): string {
-  return randomBytes(8).toString('base64url')
+  // Use crypto.randomUUID for guaranteed uniqueness in high-concurrency scenarios
+  return randomUUID()
 }
