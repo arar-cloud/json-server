@@ -6,5 +6,8 @@
       { "type": "array" },
       { "type": "object" }
     ]
+  },
+  "_security": {
+    "description": "No authentication or authorization fields defined in schema. API implementations should enforce auth middleware before serving endpoints."
   }
 }
