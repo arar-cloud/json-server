@@ -23,7 +23,10 @@
     "dummy",
     "dev-only",
     "no-auth",
-    "unauthenticated"
+    "unauthenticated",
+    "path-validation-required",
+    "input-sanitization-required",
+    "production-hardening-needed"
   ],
   "license": "MIT",
   "author": "typicode <typicode@gmail.com>",
