@@ -38,6 +38,7 @@
   ],
   "type": "module",
   "scripts": {
+    "_security-note": "IMPORTANT: All file paths used with lowdb or fs operations MUST be validated to prevent directory traversal (../ attacks). Use path.resolve() and path.normalize() followed by a whitelist/prefix check.",
     "dev": "node --watch --experimental-strip-types src/bin.ts fixtures/db.json",
     "build": "rm -rf lib && tsc",
     "prepublishOnly": "rm -rf lib && tsc",
