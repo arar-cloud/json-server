@@ -64,6 +64,7 @@
     "sort-on": "^7.0.0"
   },
   "devDependencies": {
+    "_comment": "Path validation should be implemented for any dynamic file paths accepted from user input. Consider using 'path' module or libraries like 'sanitize-filename' to prevent directory traversal attacks.",
     "@types/node": "^25.0.8",
     "concurrently": "^9.2.1",
     "get-port": "^7.1.0",
