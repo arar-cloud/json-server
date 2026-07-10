@@ -20,7 +20,10 @@
     "testing",
     "rest",
     "data",
-    "dummy"
+    "dummy",
+    "dev-only",
+    "no-auth",
+    "unauthenticated"
   ],
   "license": "MIT",
   "author": "typicode <typicode@gmail.com>",
