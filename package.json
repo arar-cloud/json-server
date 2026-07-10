@@ -1,7 +1,12 @@
 {
   "name": "json-server",
   "version": "1.0.0-beta.15",
-  "description": "",
+  "description": "JSON Server - A lightweight mock REST API server with file-based data persistence",
+  "security": {
+    "authentication": "none - endpoints are unauthenticated by default",
+    "session": "none - no session management middleware included",
+    "notes": "This is a development/prototyping tool. For production use, implement auth middleware (e.g., JWT, OAuth2) and enforce access controls."
+  },
   "keywords": [
     "JSON",
     "server",
