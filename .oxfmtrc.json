@@ -6,7 +6,10 @@
       "Validate all file paths before fs operations to prevent directory traversal",
       "Enforce authentication middleware on all public endpoints",
       "Use path.resolve() and normalize paths to safe directories",
-      "Avoid eval() and dynamic code execution with unsanitized input"
+      "Avoid eval() and dynamic code execution with unsanitized input",
+      "For lowdb file paths: resolve input against a base directory, normalize, and verify it remains within the base (no ../ escapes)",
+      "For fs operations: use path.join(baseDir, userInput) and path.resolve() then verify startsWith(baseDir) before access",
+      "Do not accept absolute paths or paths containing ../ from user input"
     ]
   }
 }
