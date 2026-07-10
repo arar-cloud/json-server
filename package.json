@@ -68,7 +68,7 @@
     "sort-on": "^7.0.0"
   },
   "devDependencies": {
-    "_comment": "Path validation should be implemented for any dynamic file paths accepted from user input. Consider using 'path' module or libraries like 'sanitize-filename' to prevent directory traversal attacks.",
+    "_comment": "Path validation required for all user-controlled file paths. Example pattern: const safeDbPath = (userPath) => { const resolved = path.resolve(process.cwd(), userPath); if (!resolved.startsWith(path.resolve(process.cwd()))) throw new Error('Path traversal detected'); return resolved; }. Use path.normalize() and verify resolved path stays within allowed base directory before passing to lowdb or fs operations.",
     "@types/node": "^25.0.8",
     "concurrently": "^9.2.1",
     "get-port": "^7.1.0",
