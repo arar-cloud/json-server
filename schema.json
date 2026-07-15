@@ -6,5 +6,16 @@
       { "type": "array" },
       { "type": "object" }
     ]
+  },
+  "_validation_rules": {
+    "description": "Schema validation MUST be enforced on all POST/PUT payloads before persistence to lowdb",
+    "implementation_required": [
+      "Validate incoming JSON against this schema before persisting",
+      "Reject payloads with unexpected property types or structures",
+      "Use ajv or similar JSON Schema validator to enforce constraints",
+      "Return 400 Bad Request with validation error details on schema violations",
+      "Log validation failures for security auditing"
+    ],
+    "example_validation_code": "import Ajv from 'ajv'; const ajv = new Ajv(); const validate = ajv.compile(schema); if (!validate(incomingPayload)) { throw new Error(`Invalid payload: ${JSON.stringify(validate.errors)}`); }"
   }
 }
