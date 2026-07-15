@@ -1,4 +1,7 @@
 {
-  "semi": false,
-  "singleQuote": true,
+  "pathValidation": {
+    "allowedDirs": ["fixtures"],
+    "maxPathDepth": 2,
+    "enforceRelative": true
+  }
 }
