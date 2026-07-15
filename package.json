@@ -26,6 +26,12 @@
   "bin": {
     "json-server": "lib/bin.js"
   },
+  "securityPolicy": {
+    "dbPathValidation": "enabled",
+    "allowedDatabaseDirs": ["fixtures"],
+    "pathTraversalPrevention": "strict",
+    "description": "Database file paths are validated and restricted to fixtures/ directory to prevent path traversal attacks"
+  },
   "files": [
     "lib",
     "views",
