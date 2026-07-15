@@ -5,7 +5,9 @@
   "security": {
     "authentication": "none - endpoints are unauthenticated by default",
     "session": "none - no session management middleware included",
-    "notes": "This is a development/prototyping tool. For production use, implement auth middleware (e.g., JWT, OAuth2) and enforce access controls."
+    "json_payload_validation": "REQUIRED - All POST/PUT payloads MUST be validated against schema.json before persistence. Use JSON Schema validator (ajv recommended) to enforce type and structure constraints.",
+    "sensitive_data": "Test fixtures (fixtures/db.json, fixtures/db.json5) must NOT contain credentials, API keys, passwords, or PII. Use environment variables for sensitive data in development.",
+    "notes": "This is a development/prototyping tool. For production use, implement auth middleware (e.g., JWT, OAuth2), enforce access controls, validate all JSON payloads, and sanitize user input."
   },
   "keywords": [
     "JSON",
@@ -26,7 +28,9 @@
     "unauthenticated",
     "path-validation-required",
     "input-sanitization-required",
-    "production-hardening-needed"
+    "production-hardening-needed",
+    "schema-validation-required-for-post-put",
+    "json-schema-enforcement-required"
   ],
   "license": "MIT",
   "author": "typicode <typicode@gmail.com>",
