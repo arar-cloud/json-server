@@ -9,7 +9,12 @@
       "Avoid eval() and dynamic code execution with unsanitized input",
       "For lowdb file paths: resolve input against a base directory, normalize, and verify it remains within the base (no ../ escapes)",
       "For fs operations: use path.join(baseDir, userInput) and path.resolve() then verify startsWith(baseDir) before access",
-      "Do not accept absolute paths or paths containing ../ from user input"
+      "Do not accept absolute paths or paths containing ../ from user input",
+      "MANDATORY: Validate all JSON payloads in POST/PUT operations against schema.json before persisting to lowdb",
+      "Use JSON Schema validator (ajv or equivalent) to enforce type constraints and reject malformed structures",
+      "Return 400 Bad Request with validation errors when payload does not conform to schema",
+      "CRITICAL: Never commit credentials, API keys, passwords, or PII to test fixtures (fixtures/db.json, fixtures/db.json5)",
+      "Use environment variables or placeholder values for sensitive data in fixtures"
     ]
   }
 }
