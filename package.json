@@ -45,6 +45,7 @@
   },
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test src/*.test.ts",
+    "test:bundle": "npm run build && npm run bundle-size",
     "lint": "oxlint src",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
