@@ -38,9 +38,10 @@
     "bundle-size": "node -e \"const fs=require('fs');const size=fs.statSync('lib/bin.js').size;const limit=500000;console.log('Bundle size:',size,'bytes (limit:',limit,')');process.exit(size>limit?1:0)\"",
     "prepublishOnly": "rm -rf lib && tsc",
   "_performanceNotes": {
-    "bundleOptimization": "ESM modules with tree-shaking enabled in build. Minified output via esbuild. Focus on reducing tinyhttp and transitive dependencies.",
+    "bundleOptimization": "ESM modules with tree-shaking enabled in build. Minified output via esbuild. Bundle size monitored via size-limit (500KB limit on lib/bin.js). Focus on reducing tinyhttp and transitive dependencies.",
     "compressionTargets": "Sirv configured for gzip/brotli compression on static assets during dev and production builds.",
-    "codeQuality": "Formatter rules encourage module splitting patterns to maximize dead code elimination and tree-shaking effectiveness."
+    "codeQuality": "Formatter rules encourage module splitting patterns to maximize dead code elimination and tree-shaking effectiveness.",
+    "lowdbOptimization": "Lazy loading enabled via --lazy-load flag to defer JSON parsing of fixtures until first request. Reduces TTFB and startup I/O overhead. DB memoization prevents repeated parsing of large fixture files."
   },
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test src/*.test.ts",
