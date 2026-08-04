@@ -33,7 +33,7 @@
   ],
   "type": "module",
   "scripts": {
-    "dev": "node --watch --experimental-strip-types src/bin.ts fixtures/db.json --compress",
+    "dev": "node --watch --experimental-strip-types src/bin.ts fixtures/db.json --compress --lazy-load",
     "build": "rm -rf lib && tsc && esbuild src/bin.ts --bundle --minify --tree-shaking=true --outfile=lib/bin.js",
     "bundle-size": "node -e \"const fs=require('fs');const size=fs.statSync('lib/bin.js').size;const limit=500000;console.log('Bundle size:',size,'bytes (limit:',limit,')');process.exit(size>limit?1:0)\"",
     "prepublishOnly": "rm -rf lib && tsc",
