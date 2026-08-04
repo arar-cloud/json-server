@@ -1,4 +1,14 @@
 {
   "semi": false,
   "singleQuote": true,
+  "importOrder": [
+    "^[./]"
+  ],
+  "importOrderSeparateGroups": true,
+  "importOrderGroupNamespaceSpecifiers": true,
+  "trailingComma": "es5",
+  "arrowParens": "always",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false
 }
