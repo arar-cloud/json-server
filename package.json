@@ -34,7 +34,7 @@
   "type": "module",
   "scripts": {
     "dev": "CHOKIDAR_USEPOLLING=false node --watch --experimental-strip-types src/bin.ts fixtures/db.json",
-    "build": "rm -rf lib && tsc",
+    "build": "rm -rf lib && tsc --incremental",
     "prepublishOnly": "rm -rf lib && tsc",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test src/*.test.ts",
