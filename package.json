@@ -36,6 +36,11 @@
     "dev": "node --watch --experimental-strip-types src/bin.ts fixtures/db.json --compress",
     "build": "rm -rf lib && tsc && esbuild src/bin.ts --bundle --minify --tree-shaking=true --outfile=lib/bin.js",
     "prepublishOnly": "rm -rf lib && tsc",
+  "_performanceNotes": {
+    "bundleOptimization": "ESM modules with tree-shaking enabled in build. Minified output via esbuild. Focus on reducing tinyhttp and transitive dependencies.",
+    "compressionTargets": "Sirv configured for gzip/brotli compression on static assets during dev and production builds.",
+    "codeQuality": "Formatter rules encourage module splitting patterns to maximize dead code elimination and tree-shaking effectiveness."
+  },
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test src/*.test.ts",
     "lint": "oxlint src",
