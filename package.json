@@ -71,10 +71,19 @@
     "husky": "^9.1.7",
     "oxfmt": "^0.24.0",
     "oxlint": "^1.39.0",
+    "size-limit": "^11.1.0",
+    "@size-limit/esbuild-why": "^11.1.0",
     "tempy": "^3.1.0",
     "type-fest": "^5.4.0",
     "typescript": "^5.9.3"
   },
+  "size-limit": [
+    {
+      "path": "lib/bin.js",
+      "limit": "500 KB",
+      "running": false
+    }
+  ],
   "engines": {
     "node": ">=22.12.0"
   }
