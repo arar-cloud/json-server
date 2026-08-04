@@ -34,7 +34,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch --experimental-strip-types src/bin.ts fixtures/db.json --compress",
-    "build": "rm -rf lib && tsc",
+    "build": "rm -rf lib && tsc && esbuild src/bin.ts --bundle --minify --tree-shaking=true --outfile=lib/bin.js",
     "prepublishOnly": "rm -rf lib && tsc",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test src/*.test.ts",
