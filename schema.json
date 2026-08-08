@@ -1,6 +1,17 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
+  "_caching": {
+    "enabled": true,
+    "ttl_ms": 3600000,
+    "strategy": "memoize-by-entity-type",
+    "note": "Validation functions are pre-computed at startup and cached keyed by entity type to eliminate repeated schema parsing overhead."
+  },
+  "_validation_index": {
+    "posts": { "type": "array", "cacheable": true },
+    "comments": { "type": "array", "cacheable": true },
+    "profile": { "type": "object", "cacheable": true }
+  },
   "additionalProperties": {
     "oneOf": [
       { "type": "array" },
