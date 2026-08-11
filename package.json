@@ -59,6 +59,7 @@
     "sort-on": "^7.0.0"
   },
   "devDependencies": {
+    "@tinyhttp/compression": "^2.2.0",
     "@types/node": "^25.0.8",
     "concurrently": "^9.2.1",
     "get-port": "^7.1.0",
