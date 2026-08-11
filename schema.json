@@ -12,6 +12,16 @@
     "comments": { "type": "array", "cacheable": true },
     "profile": { "type": "object", "cacheable": true }
   },
+  "_sort_indices": {
+    "posts": ["id", "title"],
+    "comments": ["id", "postId"],
+    "profile": []
+  },
+  "_query_optimization": {
+    "posts": { "indexed_fields": ["id"], "hot_filters": ["id"] },
+    "comments": { "indexed_fields": ["id", "postId"], "hot_filters": ["postId", "id"] },
+    "profile": { "indexed_fields": [], "hot_filters": [] }
+  },
   "additionalProperties": {
     "oneOf": [
       { "type": "array" },
