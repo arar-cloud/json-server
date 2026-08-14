@@ -61,8 +61,8 @@ function parseListParams(req: any) {
 
   const pageRaw = params.get('_page')
   const perPageRaw = params.get('_per_page')
-  const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
-  const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
+  const page = pageRaw === null ? undefined : parseIntWithFallback(pageRaw, 1)
+  const perPage = perPageRaw === null ? undefined : parseIntWithFallback(perPageRaw, 10)
 
   return {
     where,
