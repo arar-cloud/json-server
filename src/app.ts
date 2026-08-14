@@ -25,6 +25,13 @@ const eta = new Eta({
   cache: isProduction,
 })
 
+function parseIntWithFallback(value: string | string[] | undefined, defaultValue: number): number {
+  if (!value) return defaultValue
+  const str = Array.isArray(value) ? value[0] : value
+  const parsed = Number.parseInt(str, 10)
+  return isNaN(parsed) ? defaultValue : parsed
+}
+
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
 
 function parseListParams(req: any) {
