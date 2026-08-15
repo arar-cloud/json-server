@@ -32,6 +32,17 @@ function parseIntWithFallback(value: string | string[] | undefined, defaultValue
   return isNaN(parsed) ? defaultValue : parsed
 }
 
+function parsePaginationParams(params: URLSearchParams): { page?: number; perPage?: number } {
+  const pageRaw = params.get('_page')
+  const perPageRaw = params.get('_per_page')
+  const page = pageRaw === null ? undefined : parseIntWithFallback(pageRaw, 1)
+  const perPage = perPageRaw === null ? undefined : parseIntWithFallback(perPageRaw, 10)
+  return {
+    page: Number.isNaN(page) ? undefined : page,
+    perPage: Number.isNaN(perPage) ? undefined : perPage,
+  }
+}
+
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
 
 function parseListParams(req: any) {
@@ -58,16 +69,13 @@ function parseListParams(req: any) {
     }
   }
 
-  const pageRaw = params.get('_page')
-  const perPageRaw = params.get('_per_page')
-  const page = pageRaw === null ? undefined : parseIntWithFallback(pageRaw, 1)
-  const perPage = perPageRaw === null ? undefined : parseIntWithFallback(perPageRaw, 10)
+  const { page, perPage } = parsePaginationParams(params)
 
   return {
     where,
     sort: params.get('_sort') ?? undefined,
-    page: Number.isNaN(page) ? undefined : page,
-    perPage: Number.isNaN(perPage) ? undefined : perPage,
+    page,
+    perPage,
     embed: req.query['_embed'],
   }
 }
