@@ -35,8 +35,7 @@ function parseIntWithFallback(value: string | string[] | undefined, defaultValue
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
 
 function parseListParams(req: any) {
-  const queryString = req.url.split('?')[1] ?? ''
-  const params = new URLSearchParams(queryString)
+  const params = new URLSearchParams(new URL(req.url, `http://${req.hostname}`).search)
 
   const filterParamEntries: Array<[string, string]> = []
   for (const [key, value] of params.entries()) {
