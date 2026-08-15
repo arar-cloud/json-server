@@ -43,7 +43,7 @@ function parsePaginationParams(params: URLSearchParams): { page?: number; perPag
   }
 }
 
-const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
+const RESERVED_QUERY_KEYS = Object.freeze(new Set(['_sort', '_page', '_per_page', '_embed', '_where']))
 
 function parseListParams(req: any) {
   const params = new URLSearchParams(new URL(req.url, `http://${req.hostname}`).search)
