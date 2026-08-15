@@ -5,6 +5,10 @@ import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
 const OPERATOR_PATTERN = /^(.*)_([a-z]+)$/
 
+// Cache for parseWhere results to avoid redundant parsing of identical query strings
+const PARSE_WHERE_CACHE = new Map<string, JsonObject>()
+const MAX_CACHE_SIZE = 256
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
@@ -66,6 +70,11 @@ function coerceValue(value: string): string | number | boolean | null {
 }
 
 export function parseWhere(query: string): JsonObject {
+  // Return cached result if available
+  if (PARSE_WHERE_CACHE.has(query)) {
+    return PARSE_WHERE_CACHE.get(query)!
+  }
+
   const out: JsonObject = {}
   const params = new URLSearchParams(query)
   valueCache.clear()
@@ -75,6 +84,16 @@ export function parseWhere(query: string): JsonObject {
     if (op === null) continue
     setPathOp(out, path, op, rawValue)
   }
+
+  // Store in cache with simple size limit to prevent unbounded growth
+  if (PARSE_WHERE_CACHE.size >= MAX_CACHE_SIZE) {
+    // Remove oldest entry (first key)
+    const firstKey = PARSE_WHERE_CACHE.keys().next().value
+    if (firstKey) {
+      PARSE_WHERE_CACHE.delete(firstKey)
+    }
+  }
+  PARSE_WHERE_CACHE.set(query, out)
 
   return out
 }
