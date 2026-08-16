@@ -31,14 +31,14 @@ function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
   const params = new URLSearchParams(queryString)
 
-  const filterParams = new URLSearchParams()
+  const filterParts: string[] = []
   for (const [key, value] of params.entries()) {
     if (!RESERVED_QUERY_KEYS.has(key)) {
-      filterParams.append(key, value)
+      filterParts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     }
   }
 
-  let where = parseWhere(filterParams.toString())
+  let where = parseWhere(filterParts.join('&'))
   const rawWhere = params.get('_where')
   if (typeof rawWhere === 'string') {
     try {
