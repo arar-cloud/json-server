@@ -3,6 +3,11 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
+// Memoization cache for parseWhere results
+// Limits to 1000 entries to prevent unbounded memory growth
+const parseWhereCache = new Map<string, JsonObject>()
+const CACHE_SIZE_LIMIT = 1000
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
@@ -56,6 +61,16 @@ function coerceValue(value: string): string | number | boolean | null {
 }
 
 export function parseWhere(query: string): JsonObject {
+  // Return cached result if available
+  if (parseWhereCache.has(query)) {
+    return parseWhereCache.get(query)!
+  }
+
+  // If cache is full, clear it to prevent unbounded growth
+  if (parseWhereCache.size >= CACHE_SIZE_LIMIT) {
+    parseWhereCache.clear()
+  }
+
   const out: JsonObject = {}
   const params = new URLSearchParams(query)
 
@@ -65,5 +80,7 @@ export function parseWhere(query: string): JsonObject {
     setPathOp(out, path, op, rawValue)
   }
 
+  // Store in cache before returning
+  parseWhereCache.set(query, out)
   return out
 }
