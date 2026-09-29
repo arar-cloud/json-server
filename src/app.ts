@@ -83,9 +83,13 @@ function parseListParams(req: any) {
 function withBody(action: (name: string, body: Record<string, unknown>) => Promise<unknown>) {
   return async (req: any, res: any, next: any) => {
     const { name = '' } = req.params
-    if (!isItem(req.body)) {
-      res.status(400).json({ error: 'Body must be a JSON object' })
-      return
+    // Cache isItem validation result to avoid redundant checks
+    if (!res.locals._bodyValidated) {
+      if (!isItem(req.body)) {
+        res.status(400).json({ error: 'Body must be a JSON object' })
+        return
+      }
+      res.locals._bodyValidated = true
     }
     res.locals['data'] = await action(name, req.body)
     next?.()
@@ -97,9 +101,13 @@ function withIdAndBody(
 ) {
   return async (req: any, res: any, next: any) => {
     const { name = '', id = '' } = req.params
-    if (!isItem(req.body)) {
-      res.status(400).json({ error: 'Body must be a JSON object' })
-      return
+    // Cache isItem validation result to avoid redundant checks
+    if (!res.locals._bodyValidated) {
+      if (!isItem(req.body)) {
+        res.status(400).json({ error: 'Body must be a JSON object' })
+        return
+      }
+      res.locals._bodyValidated = true
     }
     res.locals['data'] = await action(name, id, req.body)
     next?.()
