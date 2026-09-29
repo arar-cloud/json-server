@@ -25,7 +25,18 @@ const eta = new Eta({
   cache: isProduction,
 })
 
-const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
+const RESERVED_QUERY_KEYS = new Set([
+  '_embed',
+  '_expand',
+  '_sort',
+  '_order',
+  '_start',
+  '_end',
+  '_limit',
+  '_page',
+  '_per_page',
+  '_where',
+])
 
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
