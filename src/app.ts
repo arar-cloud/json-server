@@ -52,6 +52,10 @@ function parseListParams(req: any) {
   let where = parseWhere(filterParams.toString())
   const rawWhere = params.get('_where')
   if (typeof rawWhere === 'string') {
+    // Payload size validation to prevent ReDoS and resource exhaustion
+    if (rawWhere.length > 8192) {
+      throw new Error('_where parameter exceeds size limit (8KB)')
+    }
     try {
       const parsed = JSON.parse(rawWhere)
       if (typeof parsed === 'object' && parsed !== null) {
