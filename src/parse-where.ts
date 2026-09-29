@@ -55,6 +55,28 @@ function coerceValue(value: string): string | number | boolean | null {
   return value
 }
 
+export function parseListParams(
+  url: string,
+  reserved: Set<string>,
+): Record<string, unknown> {
+  const query = new URLSearchParams(url.split('?')[1])
+  const filterParams: Record<string, unknown> = {}
+  let _where: string | null = null
+  let hasWhere = false
+
+  // Single-pass iteration: collect filter params and extract _where simultaneously
+  for (const [key, value] of query) {
+    if (key === '_where') {
+      _where = value
+      hasWhere = true
+    } else if (!reserved.has(key)) {
+      filterParams[key] = value
+    }
+  }
+
+  return hasWhere && _where ? parseWhere(_where) : filterParams
+}
+
 export function parseWhere(query: string): JsonObject {
   const out: JsonObject = {}
   const params = new URLSearchParams(query)
