@@ -106,6 +106,12 @@ export function parseListParams(
 }
 
 export function parseWhere(query: string): JsonObject {
+  // Check cache first to avoid repeated parsing of identical where clauses
+  const cached = whereCache.get(query)
+  if (cached !== undefined) {
+    return cached
+  }
+
   const out: JsonObject = {}
   const params = new URLSearchParams(query)
 
@@ -115,5 +121,7 @@ export function parseWhere(query: string): JsonObject {
     setPathOp(out, path, op, rawValue)
   }
 
+  // Store parsed result in cache for future identical requests
+  whereCache.set(query, out)
   return out
 }
