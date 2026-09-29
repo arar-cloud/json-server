@@ -39,7 +39,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test src/*.test.ts",
     "lint": "oxlint src",
-    "fmt": "oxfmt",
+    "fmt": "oxfmt --check && oxfmt --write",
     "fmt:check": "oxfmt --check",
     "prepare": "husky"
   },
