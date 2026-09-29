@@ -42,14 +42,15 @@ function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
   const params = new URLSearchParams(queryString)
 
-  const filterParams = new URLSearchParams()
+  // Build structured filter object to avoid re-serialization in parseWhere
+  const filterParams: Record<string, string> = {}
   for (const [key, value] of params.entries()) {
     if (!RESERVED_QUERY_KEYS.has(key)) {
-      filterParams.append(key, value)
+      filterParams[key] = value
     }
   }
 
-  let where = parseWhere(filterParams.toString())
+  let where = parseWhere(filterParams)
   const rawWhere = params.get('_where')
   if (typeof rawWhere === 'string') {
     // Payload size validation to prevent ReDoS and resource exhaustion

@@ -3,6 +3,34 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
+// Simple LRU cache for parsed where clauses to avoid repeated parsing
+class LRUCache {
+  private cache: Map<string, JsonObject> = new Map()
+  private readonly maxSize = 100
+
+  get(key: string): JsonObject | undefined {
+    if (!this.cache.has(key)) return undefined
+    // Move to end (most recently used)
+    const value = this.cache.get(key)!
+    this.cache.delete(key)
+    this.cache.set(key, value)
+    return value
+  }
+
+  set(key: string, value: JsonObject): void {
+    if (this.cache.has(key)) {
+      this.cache.delete(key)
+    }
+    this.cache.set(key, value)
+    if (this.cache.size > this.maxSize) {
+      const firstKey = this.cache.keys().next().value
+      this.cache.delete(firstKey)
+    }
+  }
+}
+
+const whereCache = new LRUCache()
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
