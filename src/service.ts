@@ -130,7 +130,19 @@ export class Service {
       results = results.map((item) => embed(this.#db, name, item, related))
     })
 
-    results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
+    // Optimize for common single-field equality filter case (avoid full scan)
+    const queryKeys = Object.keys(opts.where)
+    if (queryKeys.length === 1) {
+      const key = queryKeys[0]
+      const filterVal = opts.where[key]
+      if (typeof filterVal !== 'object' || filterVal === null || Array.isArray(filterVal)) {
+        results = results.filter((item) => item[key] === filterVal)
+      } else {
+        results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
+      }
+    } else {
+      results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
+    }
     if (opts.sort) {
       results = sortOn(results, opts.sort.split(','))
     }
