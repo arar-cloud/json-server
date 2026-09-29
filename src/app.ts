@@ -25,22 +25,38 @@ const eta = new Eta({
   cache: isProduction,
 })
 
-const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
+const RESERVED_QUERY_KEYS = new Set([
+  '_embed',
+  '_expand',
+  '_sort',
+  '_order',
+  '_start',
+  '_end',
+  '_limit',
+  '_page',
+  '_per_page',
+  '_where',
+])
 
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
   const params = new URLSearchParams(queryString)
 
-  const filterParams = new URLSearchParams()
+  // Build structured filter object to avoid re-serialization in parseWhere
+  const filterParams: Record<string, string> = {}
   for (const [key, value] of params.entries()) {
     if (!RESERVED_QUERY_KEYS.has(key)) {
-      filterParams.append(key, value)
+      filterParams[key] = value
     }
   }
 
-  let where = parseWhere(filterParams.toString())
+  let where = parseWhere(new URLSearchParams(filterParams).toString())
   const rawWhere = params.get('_where')
   if (typeof rawWhere === 'string') {
+    // Payload size validation to prevent ReDoS and resource exhaustion
+    if (rawWhere.length > 8192) {
+      throw new Error('_where parameter exceeds size limit (8KB)')
+    }
     try {
       const parsed = JSON.parse(rawWhere)
       if (typeof parsed === 'object' && parsed !== null) {
@@ -68,9 +84,13 @@ function parseListParams(req: any) {
 function withBody(action: (name: string, body: Record<string, unknown>) => Promise<unknown>) {
   return async (req: any, res: any, next: any) => {
     const { name = '' } = req.params
-    if (!isItem(req.body)) {
-      res.status(400).json({ error: 'Body must be a JSON object' })
-      return
+    // Cache isItem validation result to avoid redundant checks
+    if (!res.locals._bodyValidated) {
+      if (!isItem(req.body)) {
+        res.status(400).json({ error: 'Body must be a JSON object' })
+        return
+      }
+      res.locals._bodyValidated = true
     }
     res.locals['data'] = await action(name, req.body)
     next?.()
@@ -82,9 +102,13 @@ function withIdAndBody(
 ) {
   return async (req: any, res: any, next: any) => {
     const { name = '', id = '' } = req.params
-    if (!isItem(req.body)) {
-      res.status(400).json({ error: 'Body must be a JSON object' })
-      return
+    // Cache isItem validation result to avoid redundant checks
+    if (!res.locals._bodyValidated) {
+      if (!isItem(req.body)) {
+        res.status(400).json({ error: 'Body must be a JSON object' })
+        return
+      }
+      res.locals._bodyValidated = true
     }
     res.locals['data'] = await action(name, id, req.body)
     next?.()

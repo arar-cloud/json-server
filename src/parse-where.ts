@@ -3,6 +3,35 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
+// Simple LRU cache for parsed where clauses to avoid repeated parsing
+class LRUCache {
+  private cache: Map<string, JsonObject> = new Map()
+  private readonly maxSize = 100
+
+  get(key: string): JsonObject | undefined {
+    if (!this.cache.has(key)) return undefined
+    // Move to end (most recently used)
+    const value = this.cache.get(key)!
+    this.cache.delete(key)
+    this.cache.set(key, value)
+    return value
+  }
+
+  set(key: string, value: JsonObject): void {
+    if (this.cache.has(key)) {
+      this.cache.delete(key)
+    }
+    this.cache.set(key, value)
+    if (this.cache.size > this.maxSize) {
+      const firstKey = this.cache.keys().next().value
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      this.cache.delete(firstKey!)
+    }
+  }
+}
+
+const whereCache = new LRUCache()
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
@@ -55,7 +84,35 @@ function coerceValue(value: string): string | number | boolean | null {
   return value
 }
 
+export function parseListParams(
+  url: string,
+  reserved: Set<string>,
+): Record<string, unknown> {
+  const query = new URLSearchParams(url.split('?')[1])
+  const filterParams: Record<string, unknown> = {}
+  let _where: string | null = null
+  let hasWhere = false
+
+  // Single-pass iteration: collect filter params and extract _where simultaneously
+  for (const [key, value] of query) {
+    if (key === '_where') {
+      _where = value
+      hasWhere = true
+    } else if (!reserved.has(key)) {
+      filterParams[key] = value
+    }
+  }
+
+  return hasWhere && _where ? parseWhere(_where) : filterParams
+}
+
 export function parseWhere(query: string): JsonObject {
+  // Check cache first to avoid repeated parsing of identical where clauses
+  const cached = whereCache.get(query)
+  if (cached !== undefined) {
+    return cached
+  }
+
   const out: JsonObject = {}
   const params = new URLSearchParams(query)
 
@@ -65,5 +122,7 @@ export function parseWhere(query: string): JsonObject {
     setPathOp(out, path, op, rawValue)
   }
 
+  // Store parsed result in cache for future identical requests
+  whereCache.set(query, out)
   return out
 }
