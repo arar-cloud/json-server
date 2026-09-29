@@ -24,7 +24,8 @@ class LRUCache {
     this.cache.set(key, value)
     if (this.cache.size > this.maxSize) {
       const firstKey = this.cache.keys().next().value
-      this.cache.delete(firstKey)
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      this.cache.delete(firstKey!)
     }
   }
 }

@@ -50,7 +50,7 @@ function parseListParams(req: any) {
     }
   }
 
-  let where = parseWhere(filterParams)
+  let where = parseWhere(new URLSearchParams(filterParams).toString())
   const rawWhere = params.get('_where')
   if (typeof rawWhere === 'string') {
     // Payload size validation to prevent ReDoS and resource exhaustion
