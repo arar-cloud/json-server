@@ -3,6 +3,9 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
+// Cache regex patterns at module level to avoid recompilation on every call
+const OPERATOR_STYLE_REGEX = /^(.*)_([a-z]+)$/
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
@@ -16,7 +19,7 @@ function splitKey(key: string): { path: string; op: WhereOperator | null } {
   }
 
   // Compatibility with v0.17 operator style (e.g. _lt, _gt)
-  const underscoreMatch = key.match(/^(.*)_([a-z]+)$/)
+  const underscoreMatch = key.match(OPERATOR_STYLE_REGEX)
   if (underscoreMatch) {
     const path = underscoreMatch[1]
     const op = underscoreMatch[2]
