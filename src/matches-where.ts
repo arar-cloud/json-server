@@ -11,9 +11,12 @@ function isJSONObject(value: unknown): value is JsonObject {
 function getKnownOperators(value: unknown): WhereOperator[] {
   if (!isJSONObject(value)) return []
 
+  // Cache property descriptor lookups: collect operators in single pass
   const ops: WhereOperator[] = []
+  const valueObj = value as Record<string, unknown>
+  
   for (const op of WHERE_OPERATORS) {
-    if (op in value) {
+    if (valueObj.hasOwnProperty(op)) {
       ops.push(op)
     }
   }
