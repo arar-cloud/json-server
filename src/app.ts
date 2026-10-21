@@ -31,15 +31,20 @@ function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
   const params = new URLSearchParams(queryString)
 
+  // Single pass: collect filter params and reserved values simultaneously
   const filterParams = new URLSearchParams()
+  const reserved: Record<string, string> = {}
+  
   for (const [key, value] of params.entries()) {
-    if (!RESERVED_QUERY_KEYS.has(key)) {
+    if (RESERVED_QUERY_KEYS.has(key)) {
+      reserved[key] = value
+    } else {
       filterParams.append(key, value)
     }
   }
 
   let where = parseWhere(filterParams.toString())
-  const rawWhere = params.get('_where')
+  const rawWhere = reserved['_where']
   if (typeof rawWhere === 'string') {
     try {
       const parsed = JSON.parse(rawWhere)
@@ -51,14 +56,14 @@ function parseListParams(req: any) {
     }
   }
 
-  const pageRaw = params.get('_page')
-  const perPageRaw = params.get('_per_page')
+  const pageRaw = reserved['_page']
+  const perPageRaw = reserved['_per_page']
   const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
   const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
 
   return {
     where,
-    sort: params.get('_sort') ?? undefined,
+    sort: reserved['_sort'] ?? undefined,
     page: Number.isNaN(page) ? undefined : page,
     perPage: Number.isNaN(perPage) ? undefined : perPage,
     embed: req.query['_embed'],
