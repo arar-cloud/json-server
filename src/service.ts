@@ -80,9 +80,14 @@ function deleteDependents(db: Low<Data>, name: string, dependents: string[]) {
 
 export class Service {
   #db: Low<Data>
+  #requestCache: Map<string, Item[]> = new Map()
 
   constructor(db: Low<Data>) {
     this.#db = db
+  }
+
+  #clearCache(): void {
+    this.#requestCache.clear()
   }
 
   #get(name: string): Item[] | Item | undefined {
@@ -123,6 +128,16 @@ export class Service {
       return items
     }
 
+    // Generate cache key for filtered+sorted results to enable per-request memoization
+    const cacheKey = `${name}:${JSON.stringify(opts.where ?? {})}:${opts.sort ?? ''}:${ensureArray(opts.embed).join(',')}`
+    if (this.#requestCache.has(cacheKey)) {
+      const cached = this.#requestCache.get(cacheKey)!
+      if (opts.page !== undefined) {
+        return paginate(cached, opts.page, opts.perPage ?? 10)
+      }
+      return cached
+    }
+
     let results = items
 
     // Include
@@ -134,6 +149,9 @@ export class Service {
     if (opts.sort) {
       results = sortOn(results, opts.sort.split(','))
     }
+
+    // Cache filtered and sorted results for this request
+    this.#requestCache.set(cacheKey, results)
 
     if (opts.page !== undefined) {
       return paginate(results, opts.page, opts.perPage ?? 10)
