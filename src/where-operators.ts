@@ -13,6 +13,11 @@ export const WHERE_OPERATORS = [
 
 export type WhereOperator = (typeof WHERE_OPERATORS)[number]
 
+// Create O(1) lookup Map for operator validation instead of O(n) array scan
+const OPERATOR_MAP = new Map<string, WhereOperator>(
+  WHERE_OPERATORS.map((op) => [op, op])
+)
+
 export function isWhereOperator(value: string): value is WhereOperator {
-  return (WHERE_OPERATORS as readonly string[]).includes(value)
+  return OPERATOR_MAP.has(value)
 }
