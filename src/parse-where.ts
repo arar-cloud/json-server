@@ -18,6 +18,7 @@ function splitKey(key: string): { path: string; op: WhereOperator | null } {
     return isWhereOperator(op) ? { path, op } : { path, op: null }
   }
 
+  // Regex cached at module level (OPERATOR_STYLE_REGEX) to avoid recompilation per call
   // Compatibility with v0.17 operator style (e.g. _lt, _gt)
   const underscoreMatch = key.match(OPERATOR_STYLE_REGEX)
   if (underscoreMatch) {
