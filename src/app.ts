@@ -25,6 +25,8 @@ const eta = new Eta({
   cache: isProduction,
 })
 
+// Use Set for O(1) average lookup performance on fixed small collection
+// Set.has() is more efficient than object property checks for this use case
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
 
 function parseListParams(req: any) {
