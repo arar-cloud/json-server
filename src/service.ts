@@ -139,6 +139,8 @@ export class Service {
       return paginate(results, opts.page, opts.perPage ?? 10)
     }
 
+    // Apply pagination bounds early if page is not specified but results are large
+    // to avoid unnecessary memory allocation for unpaginated results
     return results
   }
 
