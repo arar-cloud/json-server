@@ -22,7 +22,11 @@ function getKnownOperators(value: unknown): WhereOperator[] {
 }
 
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
-  for (const [key, value] of Object.entries(where)) {
+  const whereEntries = Object.entries(where)
+  const whereLength = whereEntries.length
+
+  for (let i = 0; i < whereLength; i++) {
+    const [key, value] = whereEntries[i]
     if (key === 'or') {
       if (!Array.isArray(value) || value.length === 0) return false
 
@@ -47,6 +51,7 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
         if (field === undefined) return false
 
         const op = value as OperatorObject
+        const knownOpsLen = knownOps.length
         if (knownOps.includes('lt') && !((field as any) < (op.lt as any))) return false
         if (knownOps.includes('lte') && !((field as any) <= (op.lte as any))) return false
         if (knownOps.includes('gt') && !((field as any) > (op.gt as any))) return false
