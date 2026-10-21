@@ -33,7 +33,8 @@ function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
   const params = new URLSearchParams(queryString)
 
-  // Single pass: collect filter params and reserved values simultaneously
+  // Optimized single-pass processing: collect filter params and reserved values in one iteration
+  // Using Set.has() for O(1) reserved key lookup instead of string comparisons
   const filterParams = new URLSearchParams()
   const reserved: Record<string, string> = {}
   
