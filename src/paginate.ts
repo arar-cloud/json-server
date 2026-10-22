@@ -26,12 +26,10 @@ export function paginate<T>(items: T[], page: number, perPage: number): Paginati
 
   const start = (currentPage - 1) * safePerPage
   const end = Math.min(start + safePerPage, totalItems)
-  // Use direct index iteration instead of slice() to avoid allocation overhead
-  // For large datasets, this eliminates array copy operations and reduces GC pressure
-  const data: T[] = []
-  for (let i = start; i < end; i++) {
-    data.push(items[i])
-  }
+  // Optimized: Use items.slice() for better performance
+  // The native slice() is implemented in C++ and faster than manual index iteration
+  // It provides zero-copy semantics in engines like V8 for small slices
+  const data = items.slice(start, end)
 
   return {
     first,
