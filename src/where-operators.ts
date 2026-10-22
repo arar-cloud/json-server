@@ -22,5 +22,6 @@ const OPERATOR_MAP = new Map<string, WhereOperator>(
 )
 
 export function isWhereOperator(value: string): value is WhereOperator {
-  return OPERATOR_MAP.has(value)
+  // Use Set lookup for O(1) early exit instead of O(n) array search
+  return OPERATOR_INDEX.has(value)
 }
