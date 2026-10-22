@@ -41,23 +41,36 @@ type ReservedKey = keyof typeof RESERVED_KEYS
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
   
-  // Manual string parsing to avoid URLSearchParams allocation overhead
-  // Direct indexOf/slice is faster in the hot request path and reduces GC pressure
+  // Single-pass parsing: scan once to find both & and = separators
+  // Eliminates paired indexOf calls and reduces string traversal overhead
   const filterParts: string[] = []
   const reserved = new Array<string | undefined>(5) // Pre-allocated for 5 reserved keys
   
   if (queryString) {
     let pos = 0
-    while (pos < queryString.length) {
-      // Find next & separator (or end of string)
-      const ampIdx = queryString.indexOf('&', pos)
-      const pairEnd = ampIdx === -1 ? queryString.length : ampIdx
+    const qLen = queryString.length
+    
+    while (pos < qLen) {
+      // Single scan finds both & (pair end) and = (key-value split) in one pass
+      let ampIdx = -1
+      let eqIdx = -1
+      
+      for (let i = pos; i < qLen; i++) {
+        const ch = queryString[i]
+        if (ch === '=' && eqIdx === -1) eqIdx = i
+        else if (ch === '&') {
+          ampIdx = i
+          break
+        }
+      }
+      
+      const pairEnd = ampIdx === -1 ? qLen : ampIdx
       const pair = queryString.slice(pos, pairEnd)
       
-      // Split key=value
-      const eqIdx = pair.indexOf('=')
-      const key = eqIdx === -1 ? decodeURIComponent(pair) : decodeURIComponent(pair.slice(0, eqIdx))
-      const value = eqIdx === -1 ? '' : decodeURIComponent(pair.slice(eqIdx + 1))
+      // Extract key and value with single indexOf for '='
+      const eqPos = pair.indexOf('=')
+      const key = eqPos === -1 ? decodeURIComponent(pair) : decodeURIComponent(pair.slice(0, eqPos))
+      const value = eqPos === -1 ? '' : decodeURIComponent(pair.slice(eqPos + 1))
       
       // Distribute to reserved or filter arrays
       const idx = RESERVED_KEYS[key as ReservedKey]
