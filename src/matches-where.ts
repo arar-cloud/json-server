@@ -106,32 +106,47 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
         if (field === undefined) return false
 
         const op = value as OperatorObject
-        // Short-circuit AND evaluation: Convert operators array to Set for O(1) lookup
-        // and return false immediately on first failing condition (AND semantics)
-        // This is critical for performance when multiple operators are chained (e.g., {$gte: 10, $lte: 20})
-        const opSet = new Set(knownOps)
-        
-        if (opSet.has('lt') && !((field as any) < (op.lt as any))) return false
-        if (opSet.has('lte') && !((field as any) <= (op.lte as any))) return false
-        if (opSet.has('gt') && !((field as any) > (op.gt as any))) return false
-        if (opSet.has('gte') && !((field as any) >= (op.gte as any))) return false
-        if (opSet.has('eq') && !((field as any) === (op.eq as any))) return false
-        if (opSet.has('ne') && !((field as any) !== (op.ne as any))) return false
-        if (opSet.has('in')) {
-          const inValues = Array.isArray(op.in) ? op.in : [op.in]
-          if (!inValues.some((v) => (field as any) === (v as any))) return false
-        }
-        if (opSet.has('contains')) {
-          if (typeof field !== 'string') return false
-          if (!field.toLowerCase().includes(String(op.contains).toLowerCase())) return false
-        }
-        if (opSet.has('startsWith')) {
-          if (typeof field !== 'string') return false
-          if (!field.toLowerCase().startsWith(String(op.startsWith).toLowerCase())) return false
-        }
-        if (opSet.has('endsWith')) {
-          if (typeof field !== 'string') return false
-          if (!field.toLowerCase().endsWith(String(op.endsWith).toLowerCase())) return false
+        // Switch dispatch for operator evaluation: faster than repeated Set.has() + type casting
+        // V8 can optimize switch as jump table; eliminates redundant lookups and branches
+        // Each operator case evaluates only when present, reducing hot path overhead
+        for (const operator of knownOps) {
+          switch (operator) {
+            case 'lt':
+              if (!((field as any) < (op.lt as any))) return false
+              break
+            case 'lte':
+              if (!((field as any) <= (op.lte as any))) return false
+              break
+            case 'gt':
+              if (!((field as any) > (op.gt as any))) return false
+              break
+            case 'gte':
+              if (!((field as any) >= (op.gte as any))) return false
+              break
+            case 'eq':
+              if (!((field as any) === (op.eq as any))) return false
+              break
+            case 'ne':
+              if (!((field as any) !== (op.ne as any))) return false
+              break
+            case 'in': {
+              const inValues = Array.isArray(op.in) ? op.in : [op.in]
+              if (!inValues.some((v) => (field as any) === (v as any))) return false
+              break
+            }
+            case 'contains':
+              if (typeof field !== 'string') return false
+              if (!field.toLowerCase().includes(String(op.contains).toLowerCase())) return false
+              break
+            case 'startsWith':
+              if (typeof field !== 'string') return false
+              if (!field.toLowerCase().startsWith(String(op.startsWith).toLowerCase())) return false
+              break
+            case 'endsWith':
+              if (typeof field !== 'string') return false
+              if (!field.toLowerCase().endsWith(String(op.endsWith).toLowerCase())) return false
+              break
+          }
         }
         continue
       }
@@ -149,6 +164,6 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
   }
 
   // Store result in cache for future requests with same where clause
-  whereCache.set(obj, where, true)
+  whereClauseCache.set(where as object, true)
   return true
 }
