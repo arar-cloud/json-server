@@ -41,21 +41,24 @@ function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
   const params = new URLSearchParams(queryString)
 
-  // Optimized single-pass processing: collect filter params and reserved values in one iteration
-  // Using Set.has() for O(1) reserved key lookup instead of string comparisons
-  const filterParams = new URLSearchParams()
-  const reserved: Record<string, string> = {}
+  // Single-pass iteration: collect filter params and reserved values together
+  // Eliminates URLSearchParams overhead and Set lookups via direct index mapping
+  const filterParts: string[] = []
+  const reserved = new Array<string | undefined>(5) // Pre-allocated for 5 reserved keys
   
   for (const [key, value] of params.entries()) {
-    if (RESERVED_QUERY_KEYS.has(key)) {
-      reserved[key] = value
+    const idx = RESERVED_KEYS[key as ReservedKey]
+    if (idx !== undefined) {
+      reserved[idx] = value
     } else {
-      filterParams.append(key, value)
+      filterParts.push(encodeURIComponent(key) + '=' + encodeURIComponent(value))
     }
   }
 
-  let where = parseWhere(filterParams.toString())
-  const rawWhere = reserved['_where']
+  // Parse where: first from filter params, then override with raw _where if present
+  const filterStr = filterParts.join('&')
+  let where = parseWhere(filterStr)
+  const rawWhere = reserved[RESERVED_KEYS._where]
   if (typeof rawWhere === 'string') {
     try {
       const parsed = JSON.parse(rawWhere)
@@ -67,23 +70,25 @@ function parseListParams(req: any) {
     }
   }
 
-  // Early exit: only parse numeric params if they exist in reserved map
+  // Parse numeric values only once, indexed directly from reserved array
   let page: number | undefined
   let perPage: number | undefined
   
-  if ('_page' in reserved) {
-    const parsedPage = Number.parseInt(reserved['_page'], 10)
+  const pageRaw = reserved[RESERVED_KEYS._page]
+  if (pageRaw !== undefined) {
+    const parsedPage = Number.parseInt(pageRaw, 10)
     page = Number.isNaN(parsedPage) ? undefined : parsedPage
   }
   
-  if ('_per_page' in reserved) {
-    const parsedPerPage = Number.parseInt(reserved['_per_page'], 10)
+  const perPageRaw = reserved[RESERVED_KEYS._per_page]
+  if (perPageRaw !== undefined) {
+    const parsedPerPage = Number.parseInt(perPageRaw, 10)
     perPage = Number.isNaN(parsedPerPage) ? undefined : parsedPerPage
   }
 
   return {
     where,
-    sort: reserved['_sort'] ?? undefined,
+    sort: reserved[RESERVED_KEYS._sort],
     page,
     perPage,
     embed: req.query['_embed'],
