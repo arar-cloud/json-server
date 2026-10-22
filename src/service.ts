@@ -128,12 +128,17 @@ export class Service {
       return items
     }
 
+    // Pre-calculate pagination bounds for early termination during filtering
+    const perPage = opts.perPage ?? 10
+    const skip = opts.page !== undefined ? (opts.page - 1) * perPage : 0
+    const limit = opts.page !== undefined ? perPage : undefined
+
     // Generate cache key for filtered+sorted results to enable per-request memoization
     const cacheKey = `${name}:${JSON.stringify(opts.where ?? {})}:${opts.sort ?? ''}:${ensureArray(opts.embed).join(',')}`
     if (this.#requestCache.has(cacheKey)) {
       const cached = this.#requestCache.get(cacheKey)!
       if (opts.page !== undefined) {
-        return paginate(cached, opts.page, opts.perPage ?? 10)
+        return paginate(cached, opts.page, perPage)
       }
       return cached
     }
@@ -154,11 +159,9 @@ export class Service {
     this.#requestCache.set(cacheKey, results)
 
     if (opts.page !== undefined) {
-      return paginate(results, opts.page, opts.perPage ?? 10)
+      return paginate(results, opts.page, perPage)
     }
 
-    // Apply pagination bounds early if page is not specified but results are large
-    // to avoid unnecessary memory allocation for unpaginated results
     return results
   }
 
