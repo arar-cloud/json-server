@@ -150,16 +150,16 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
 
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
 
-  app.get('/:name', (req, res, next) => {
+  app.get('/:name', async (req, res, next) => {
     const { name = '' } = req.params
-    const { where, sort, page, perPage, embed } = parseListParams(req)
+    const params = parseListParams(req)
 
-    res.locals['data'] = service.find(name, {
-      where,
-      sort,
-      page,
-      perPage,
-      embed,
+    res.locals['data'] = await service.find(name, {
+      where: params.where,
+      sort: params.sort,
+      page: params.page,
+      perPage: params.perPage,
+      embed: params.embed,
     })
     next?.()
   })
