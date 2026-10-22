@@ -42,6 +42,9 @@ export class NormalizedAdapter implements Adapter<Data> {
   }
 
   async write(data: Data): Promise<void> {
-    await this.#adapter.write({ ...data, $schema: DEFAULT_SCHEMA_PATH })
+    // Avoid object spread on every write: mutate a new object directly
+    const output = data as any
+    output.$schema = DEFAULT_SCHEMA_PATH
+    await this.#adapter.write(output)
   }
 }
