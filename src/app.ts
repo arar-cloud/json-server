@@ -7,6 +7,7 @@ import { Eta } from 'eta'
 import { Low } from 'lowdb'
 import { json } from 'milliparsec'
 import sirv from 'sirv'
+import type { JsonObject } from 'type-fest'
 
 import { parseWhere } from './parse-where.ts'
 import type { Data } from './service.ts'
