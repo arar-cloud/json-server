@@ -30,7 +30,7 @@ class WhereClauseCache {
     const k = this.key(item, where)
     if (this.cache.size >= this.maxSize && !this.cache.has(k)) {
       // Remove oldest (first)
-      const firstKey = this.cache.keys().next().value
+      const firstKey = this.cache.keys().next().value as string
       this.cache.delete(firstKey)
     }
     this.cache.delete(k)

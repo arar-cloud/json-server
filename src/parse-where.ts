@@ -6,6 +6,9 @@ import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 // Pre-compile regex patterns at module level to enable V8 optimization
 // This eliminates per-call regex compilation overhead for high-volume filtering
 const OPERATOR_STYLE_REGEX = /^(.*)_([a-z]+)$/
+const BOOLEAN_PATTERN = /^(true|false)$/i
+const NULL_PATTERN = /^null$/i
+const NUMERIC_PATTERN = /^-?\d+(\.\d+)?$/
 
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   const colonIdx = key.lastIndexOf(':')
@@ -48,14 +51,14 @@ function setPathOp(root: JsonObject, path: string, op: WhereOperator, value: str
 }
 
 function coerceValue(value: string): string | number | boolean | null {
-  if (value === 'true') return true
-  if (value === 'false') return false
-  if (value === 'null') return null
+  // Use precompiled patterns for fast type checking without repeated compilation
+  if (BOOLEAN_PATTERN.test(value)) return value.toLowerCase() === 'true'
+  if (NULL_PATTERN.test(value)) return null
 
   if (value.trim() === '') return value
 
-  const num = Number(value)
-  if (Number.isFinite(num)) return num
+  // Precompiled numeric pattern avoids regex creation per call
+  if (NUMERIC_PATTERN.test(value)) return Number(value)
 
   return value
 }
