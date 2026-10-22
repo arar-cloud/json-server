@@ -6,6 +6,43 @@ import type { JsonObject } from 'type-fest'
 import { matchesWhere } from './matches-where.ts'
 import { paginate, type PaginationResult } from './paginate.ts'
 import { randomId } from './random-id.ts'
+
+// LRU cache for compiled filter predicates: memoize where-clause matching to avoid recompilation
+// Bounded to 256 entries; typical requests use 1-2 distinct where-clauses with pagination
+class PredicateCache {
+  private cache: Map<string, (item: Item) => boolean> = new Map()
+  private maxSize = 256
+
+  key(where: JsonObject): string {
+    return JSON.stringify(where)
+  }
+
+  get(where: JsonObject): ((item: Item) => boolean) | undefined {
+    const k = this.key(where)
+    if (this.cache.has(k)) {
+      const fn = this.cache.get(k)!
+      // Move to end (LRU)
+      this.cache.delete(k)
+      this.cache.set(k, fn)
+      return fn
+    }
+    return undefined
+  }
+
+  set(where: JsonObject, predicate: (item: Item) => boolean): void {
+    const k = this.key(where)
+    if (this.cache.size >= this.maxSize) {
+      // Evict oldest (first) entry
+      const firstKey = this.cache.keys().next().value
+      this.cache.delete(firstKey)
+    }
+    this.cache.delete(k)
+    this.cache.set(k, predicate)
+  }
+}
+
+const predicateCache = new PredicateCache()
+
 export type Item = Record<string, unknown>
 
 export type Data = Record<string, Item[] | Item>
@@ -161,8 +198,16 @@ export class Service {
       results = results.map((item) => embed(this.#db, name, item, related))
     })
 
+    // Check cache for compiled predicate to avoid recompilation on repeated queries
+    const where = opts.where ?? {}
+    let predicate = predicateCache.get(where)
+    if (!predicate) {
+      predicate = (item) => matchesWhere(item as JsonObject, where)
+      predicateCache.set(where, predicate)
+    }
+
     // Filter without unnecessary cloning; only final output is returned
-    results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
+    results = results.filter(predicate)
     if (opts.sort) {
       results = sortOn(results, opts.sort.split(','))
     }
