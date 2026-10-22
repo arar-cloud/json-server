@@ -40,19 +40,34 @@ type ReservedKey = keyof typeof RESERVED_KEYS
 
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
-  const params = new URLSearchParams(queryString)
-
-  // Single-pass iteration: collect filter params and reserved values together
-  // Eliminates URLSearchParams overhead and Set lookups via direct index mapping
+  
+  // Manual string parsing to avoid URLSearchParams allocation overhead
+  // Direct indexOf/slice is faster in the hot request path and reduces GC pressure
   const filterParts: string[] = []
   const reserved = new Array<string | undefined>(5) // Pre-allocated for 5 reserved keys
   
-  for (const [key, value] of params.entries()) {
-    const idx = RESERVED_KEYS[key as ReservedKey]
-    if (idx !== undefined) {
-      reserved[idx] = value
-    } else {
-      filterParts.push(encodeURIComponent(key) + '=' + encodeURIComponent(value))
+  if (queryString) {
+    let pos = 0
+    while (pos < queryString.length) {
+      // Find next & separator (or end of string)
+      const ampIdx = queryString.indexOf('&', pos)
+      const pairEnd = ampIdx === -1 ? queryString.length : ampIdx
+      const pair = queryString.slice(pos, pairEnd)
+      
+      // Split key=value
+      const eqIdx = pair.indexOf('=')
+      const key = eqIdx === -1 ? decodeURIComponent(pair) : decodeURIComponent(pair.slice(0, eqIdx))
+      const value = eqIdx === -1 ? '' : decodeURIComponent(pair.slice(eqIdx + 1))
+      
+      // Distribute to reserved or filter arrays
+      const idx = RESERVED_KEYS[key as ReservedKey]
+      if (idx !== undefined) {
+        reserved[idx] = value
+      } else {
+        filterParts.push(encodeURIComponent(key) + '=' + encodeURIComponent(value))
+      }
+      
+      pos = pairEnd + 1
     }
   }
 
