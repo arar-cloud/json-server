@@ -9,7 +9,7 @@ export type PaginationResult<T> = {
 }
 
 export function paginate<T>(items: T[], page: number, perPage: number): PaginationResult<T> {
-  const totalItems = items.length
+  const totalItems = itemCount
   // Use offset calculation: only slice the required page range instead of materializing full array
   // This is the lazy version - slice() creates a new shallow array of only page items
   const safePerPage = Number.isFinite(perPage) && perPage > 0 ? Math.floor(perPage) : 1
