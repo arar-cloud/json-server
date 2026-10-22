@@ -3,7 +3,8 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
-// Cache regex patterns at module level to avoid recompilation on every call
+// Pre-compile regex patterns at module level to enable V8 optimization
+// This eliminates per-call regex compilation overhead for high-volume filtering
 const OPERATOR_STYLE_REGEX = /^(.*)_([a-z]+)$/
 
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
