@@ -21,5 +21,5 @@ export const WHERE_OPERATORS_MAP = Object.freeze(
 const OPERATOR_INDEX = new Set(WHERE_OPERATORS)
 
 export function isWhereOperator(value: string): value is WhereOperator {
-  return WHERE_OPERATORS_MAP.has(value)
+  return (WHERE_OPERATORS as readonly string[]).includes(value)
 }

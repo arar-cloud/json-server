@@ -33,7 +33,7 @@ class PredicateCache {
     const k = this.key(where)
     if (this.cache.size >= this.maxSize) {
       // Evict oldest (first) entry
-      const firstKey = this.cache.keys().next().value
+      const firstKey = this.cache.keys().next().value as string
       this.cache.delete(firstKey)
     }
     this.cache.delete(k)
