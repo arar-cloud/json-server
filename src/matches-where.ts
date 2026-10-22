@@ -103,7 +103,9 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
         if (field === undefined) return false
 
         const op = value as OperatorObject
-        // Convert operators array to Set for O(1) lookup instead of O(n) array.includes() calls
+        // Short-circuit AND evaluation: Convert operators array to Set for O(1) lookup
+        // and return false immediately on first failing condition (AND semantics)
+        // This is critical for performance when multiple operators are chained (e.g., {$gte: 10, $lte: 20})
         const opSet = new Set(knownOps)
         
         if (opSet.has('lt') && !((field as any) < (op.lt as any))) return false
