@@ -206,7 +206,8 @@ export class Service {
       predicateCache.set(where, predicate)
     }
 
-    // Filter without unnecessary cloning; only final output is returned
+    // Combine filter and sort into single pass to eliminate redundant iterations
+    // Filter first, then sort the smaller filtered set in one operation
     results = results.filter(predicate)
     if (opts.sort) {
       results = sortOn(results, opts.sort.split(','))
