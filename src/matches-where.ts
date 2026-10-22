@@ -4,6 +4,46 @@ import { WHERE_OPERATORS, type WhereOperator } from './where-operators.ts'
 
 type OperatorObject = Partial<Record<WhereOperator, unknown>>
 
+// LRU cache for compiled where clauses: stores normalized clause evaluation results
+// Bounded to 128 entries to avoid unbounded growth; typical requests use 1-3 filters
+class WhereClauseCache {
+  private cache: Map<string, boolean> = new Map()
+  private maxSize = 128
+
+  key(item: JsonObject, where: JsonObject): string {
+    return JSON.stringify(where)
+  }
+
+  get(item: JsonObject, where: JsonObject): boolean | undefined {
+    const k = this.key(item, where)
+    if (this.cache.has(k)) {
+      const val = this.cache.get(k)
+      // Move to end (LRU)
+      this.cache.delete(k)
+      this.cache.set(k, val!)
+      return val
+    }
+    return undefined
+  }
+
+  set(item: JsonObject, where: JsonObject, result: boolean): void {
+    const k = this.key(item, where)
+    if (this.cache.size >= this.maxSize && !this.cache.has(k)) {
+      // Remove oldest (first)
+      const firstKey = this.cache.keys().next().value
+      this.cache.delete(firstKey)
+    }
+    this.cache.delete(k)
+    this.cache.set(k, result)
+  }
+
+  clear(): void {
+    this.cache.clear()
+  }
+}
+
+const whereCache = new WhereClauseCache()
+
 function isJSONObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
