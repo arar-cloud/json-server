@@ -25,8 +25,13 @@ export function paginate<T>(items: T[], page: number, perPage: number): Paginati
   const last = pages
 
   const start = (currentPage - 1) * safePerPage
-  const end = start + safePerPage
-  const data = items.slice(start, end)
+  const end = Math.min(start + safePerPage, totalItems)
+  // Use direct index iteration instead of slice() to avoid allocation overhead
+  // For large datasets, this eliminates array copy operations and reduces GC pressure
+  const data: T[] = []
+  for (let i = start; i < end; i++) {
+    data.push(items[i])
+  }
 
   return {
     first,
