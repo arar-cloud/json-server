@@ -27,9 +27,12 @@ function embed(db: Low<Data>, name: string, item: Item, related: string): Item {
       return item
     }
     const foreignKey = `${related}Id`
-    const relatedItem = relatedData.find((relatedItem: Item) => {
-      return relatedItem['id'] === item[foreignKey]
-    })
+    // Build single lookup map to avoid repeated find() calls
+    const idMap = new Map<unknown, Item>()
+    for (const r of relatedData) {
+      idMap.set(r['id'], r)
+    }
+    const relatedItem = idMap.get(item[foreignKey])
     return { ...item, [related]: relatedItem }
   }
   const relatedData: Item[] = db.data[related] as Item[]
@@ -39,9 +42,17 @@ function embed(db: Low<Data>, name: string, item: Item, related: string): Item {
   }
 
   const foreignKey = `${inflection.singularize(name)}Id`
-  const relatedItems = relatedData.filter(
-    (relatedItem: Item) => relatedItem[foreignKey] === item['id'],
-  )
+  // Build single lookup map instead of filtering for every item
+  // Reduces complexity from O(n*m) to O(n+m)
+  const byForeignKey = new Map<unknown, Item[]>()
+  for (const r of relatedData) {
+    const fk = r[foreignKey]
+    if (!byForeignKey.has(fk)) {
+      byForeignKey.set(fk, [])
+    }
+    byForeignKey.get(fk)!.push(r)
+  }
+  const relatedItems = byForeignKey.get(item['id']) ?? []
 
   return { ...item, [related]: relatedItems }
 }
