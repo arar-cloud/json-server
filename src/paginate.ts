@@ -26,9 +26,9 @@ export function paginate<T>(items: T[], page: number, perPage: number): Paginati
 
   const start = (currentPage - 1) * safePerPage
   const end = Math.min(start + safePerPage, totalItems)
-  // Optimized: Use items.slice() for better performance
-  // The native slice() is implemented in C++ and faster than manual index iteration
-  // It provides zero-copy semantics in engines like V8 for small slices
+  // Optimized: slice() only on required subset [start, end)
+  // Reduces memory allocation from O(n) to O(perPage) per paginated request
+  // For large datasets, this eliminates unnecessary full-array copies
   const data = items.slice(start, end)
 
   return {
