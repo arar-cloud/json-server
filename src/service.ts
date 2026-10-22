@@ -156,11 +156,12 @@ export class Service {
 
     let results = items
 
-    // Include
+    // Include: embed operations handle their own object mutation
     ensureArray(opts.embed).forEach((related) => {
       results = results.map((item) => embed(this.#db, name, item, related))
     })
 
+    // Filter without unnecessary cloning; only final output is returned
     results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
     if (opts.sort) {
       results = sortOn(results, opts.sort.split(','))
