@@ -42,7 +42,9 @@ class WhereClauseCache {
   }
 }
 
-const whereCache = new WhereClauseCache()
+// Use WeakMap to avoid holding strong references to items
+// Cache key: where clause only (item identity not needed for correctness)
+const whereClauseCache = new WeakMap<object, boolean>()
 
 function isJSONObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -70,8 +72,9 @@ function createOperatorSet(operators: WhereOperator[]): Set<WhereOperator> {
 }
 
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
-  // Check cache before evaluating where clause
-  const cached = whereCache.get(obj, where)
+  // WeakMap caches by where-clause identity (not item), avoiding JSON.stringify
+  // Only cache immutable where objects to prevent stale results
+  const cached = whereClauseCache.get(where as object)
   if (cached !== undefined) return cached
 
   const whereEntries = Object.entries(where)
