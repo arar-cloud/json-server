@@ -25,9 +25,17 @@ const eta = new Eta({
   cache: isProduction,
 })
 
-// Use Set for O(1) average lookup performance on fixed small collection
-// Set.has() is more efficient than object property checks for this use case
-const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
+// Pre-computed reserved key indices for O(1) lookup without Set overhead
+// Maps reserved key names to their positions in the output object for direct access
+const RESERVED_KEYS = {
+  '_sort': 0,
+  '_page': 1,
+  '_per_page': 2,
+  '_embed': 3,
+  '_where': 4,
+} as const
+
+type ReservedKey = keyof typeof RESERVED_KEYS
 
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
@@ -59,16 +67,25 @@ function parseListParams(req: any) {
     }
   }
 
-  const pageRaw = reserved['_page']
-  const perPageRaw = reserved['_per_page']
-  const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
-  const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
+  // Early exit: only parse numeric params if they exist in reserved map
+  let page: number | undefined
+  let perPage: number | undefined
+  
+  if ('_page' in reserved) {
+    const parsedPage = Number.parseInt(reserved['_page'], 10)
+    page = Number.isNaN(parsedPage) ? undefined : parsedPage
+  }
+  
+  if ('_per_page' in reserved) {
+    const parsedPerPage = Number.parseInt(reserved['_per_page'], 10)
+    perPage = Number.isNaN(parsedPerPage) ? undefined : parsedPerPage
+  }
 
   return {
     where,
     sort: reserved['_sort'] ?? undefined,
-    page: Number.isNaN(page) ? undefined : page,
-    perPage: Number.isNaN(perPage) ? undefined : perPage,
+    page,
+    perPage,
     embed: req.query['_embed'],
   }
 }

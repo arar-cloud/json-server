@@ -24,6 +24,11 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   return ops
 }
 
+// Create Set for O(1) operator lookup instead of O(n) array.includes() calls
+function createOperatorSet(operators: WhereOperator[]): Set<WhereOperator> {
+  return new Set(operators)
+}
+
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
   const whereEntries = Object.entries(where)
   const whereLength = whereEntries.length
@@ -54,26 +59,28 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
         if (field === undefined) return false
 
         const op = value as OperatorObject
-        const knownOpsLen = knownOps.length
-        if (knownOps.includes('lt') && !((field as any) < (op.lt as any))) return false
-        if (knownOps.includes('lte') && !((field as any) <= (op.lte as any))) return false
-        if (knownOps.includes('gt') && !((field as any) > (op.gt as any))) return false
-        if (knownOps.includes('gte') && !((field as any) >= (op.gte as any))) return false
-        if (knownOps.includes('eq') && !((field as any) === (op.eq as any))) return false
-        if (knownOps.includes('ne') && !((field as any) !== (op.ne as any))) return false
-        if (knownOps.includes('in')) {
+        // Convert operators array to Set for O(1) lookup instead of O(n) array.includes() calls
+        const opSet = new Set(knownOps)
+        
+        if (opSet.has('lt') && !((field as any) < (op.lt as any))) return false
+        if (opSet.has('lte') && !((field as any) <= (op.lte as any))) return false
+        if (opSet.has('gt') && !((field as any) > (op.gt as any))) return false
+        if (opSet.has('gte') && !((field as any) >= (op.gte as any))) return false
+        if (opSet.has('eq') && !((field as any) === (op.eq as any))) return false
+        if (opSet.has('ne') && !((field as any) !== (op.ne as any))) return false
+        if (opSet.has('in')) {
           const inValues = Array.isArray(op.in) ? op.in : [op.in]
           if (!inValues.some((v) => (field as any) === (v as any))) return false
         }
-        if (knownOps.includes('contains')) {
+        if (opSet.has('contains')) {
           if (typeof field !== 'string') return false
           if (!field.toLowerCase().includes(String(op.contains).toLowerCase())) return false
         }
-        if (knownOps.includes('startsWith')) {
+        if (opSet.has('startsWith')) {
           if (typeof field !== 'string') return false
           if (!field.toLowerCase().startsWith(String(op.startsWith).toLowerCase())) return false
         }
-        if (knownOps.includes('endsWith')) {
+        if (opSet.has('endsWith')) {
           if (typeof field !== 'string') return false
           if (!field.toLowerCase().endsWith(String(op.endsWith).toLowerCase())) return false
         }
