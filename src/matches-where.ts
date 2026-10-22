@@ -70,6 +70,10 @@ function createOperatorSet(operators: WhereOperator[]): Set<WhereOperator> {
 }
 
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
+  // Check cache before evaluating where clause
+  const cached = whereCache.get(obj, where)
+  if (cached !== undefined) return cached
+
   const whereEntries = Object.entries(where)
   const whereLength = whereEntries.length
 
@@ -139,5 +143,7 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
     return false
   }
 
+  // Store result in cache for future requests with same where clause
+  whereCache.set(obj, where, true)
   return true
 }
