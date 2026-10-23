@@ -1,6 +1,6 @@
 import type { JsonObject } from 'type-fest'
 
-import { WHERE_OPERATORS, type WhereOperator } from './where-operators.ts'
+import type { WhereOperator } from './where-operators.ts'
 
 type OperatorObject = Partial<Record<WhereOperator, unknown>>
 
@@ -57,9 +57,10 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   const ops: WhereOperator[] = []
   const valueObj = value as Record<string, unknown>
   
-  // WHERE_OPERATORS is iterable array of strings, not keys
+  // Check against known operator names directly
+  const validOps = new Set(['lt', 'lte', 'gt', 'gte', 'eq', 'ne', 'in', 'contains', 'startsWith', 'endsWith'] as WhereOperator[])
   for (const op of Object.keys(valueObj)) {
-    if (WHERE_OPERATORS.includes(op as WhereOperator)) {
+    if (validOps.has(op as WhereOperator)) {
       ops.push(op as WhereOperator)
     }
   }
