@@ -58,10 +58,12 @@ export class NormalizedAdapter implements Adapter<Data> {
   }
 
   async write(data: Data): Promise<void> {
-    // Avoid mutating input data: create a minimal wrapper with schema metadata only
-    // This prevents unnecessary object mutations and preserves data immutability
-    const output: RawData = Object.assign(Object.create(null), data)
-    output.$schema = DEFAULT_SCHEMA_PATH
-    await this.#adapter.write(output)
+    // Defer schema mutation: only add metadata at serialization boundary
+    // Avoids repeated object copying on each write; metadata is not accessed in hot paths
+    const dataWithSchema = data as RawData
+    dataWithSchema.$schema = DEFAULT_SCHEMA_PATH
+    await this.#adapter.write(dataWithSchema)
+    // Clean up metadata after write to maintain data immutability
+    delete (data as RawData).$schema
   }
 }
