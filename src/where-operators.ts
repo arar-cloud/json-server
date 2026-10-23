@@ -1,3 +1,13 @@
+// Numeric coercion helper: parse operands to native numeric type at operator construction time
+// instead of during every comparison, avoiding repeated Number() calls in inner loops
+export function coerceNumericOperand(value: unknown): number | unknown {
+  if (typeof value === 'string') {
+    const n = Number(value)
+    return Number.isNaN(n) ? value : n
+  }
+  return value
+}
+
 export const WHERE_OPERATORS = [
   'lt',
   'lte',
