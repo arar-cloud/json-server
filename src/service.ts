@@ -236,7 +236,6 @@ export class Service {
     })
 
     // Check cache for compiled predicate to avoid recompilation on repeated queries
-    const where = opts.where ?? {}
     let predicate = predicateCache.get(where)
     if (!predicate) {
       predicate = (item) => matchesWhere(item as JsonObject, where)
