@@ -27,23 +27,15 @@ const eta = new Eta({
 
 const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
 
-function parseListParams(req: any) {
-  const queryString = req.url.split('?')[1] ?? ''
-  const params = new URLSearchParams(queryString)
+// WeakMap cache to avoid re-parsing _where across requests with identical URLSearchParams
+const whereParseCache = new WeakMap<URLSearchParams, Record<string, unknown> | undefined>()
 
-  const filterParams = new URLSearchParams()
-  let rawWhere: string | null = null
-  
-  // Single pass: collect filter params and _where in one iteration
-  for (const [key, value] of params.entries()) {
-    if (key === '_where') {
-      rawWhere = value
-    } else if (!RESERVED_QUERY_KEYS.has(key)) {
-      filterParams.append(key, value)
-    }
+function getCachedWhereParse(params: URLSearchParams): Record<string, unknown> | undefined {
+  if (whereParseCache.has(params)) {
+    return whereParseCache.get(params)
   }
-
-  let where = parseWhere(filterParams.toString())
+  const rawWhere = params.get('_where')
+  let where: Record<string, unknown> | undefined
   if (typeof rawWhere === 'string') {
     try {
       const parsed = JSON.parse(rawWhere)
@@ -51,8 +43,30 @@ function parseListParams(req: any) {
         where = parsed
       }
     } catch {
-      // Ignore invalid JSON and fallback to parsed query params
+      // Ignore invalid JSON
     }
+  }
+  whereParseCache.set(params, where)
+  return where
+}
+
+function parseListParams(req: any) {
+  const queryString = req.url.split('?')[1] ?? ''
+  const params = new URLSearchParams(queryString)
+
+  const filterParams = new URLSearchParams()
+  
+  // Single pass: collect filter params in one iteration
+  for (const [key, value] of params.entries()) {
+    if (key !== '_where' && !RESERVED_QUERY_KEYS.has(key)) {
+      filterParams.append(key, value)
+    }
+  }
+
+  let where = parseWhere(filterParams.toString())
+  const cachedWhere = getCachedWhereParse(params)
+  if (cachedWhere !== undefined) {
+    where = cachedWhere
   }
 
   const pageRaw = params.get('_page')
