@@ -7,10 +7,13 @@ import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
 // Pre-compile regex patterns at module level to enable V8 optimization
 // This eliminates per-call regex compilation overhead for high-volume filtering
-const OPERATOR_STYLE_REGEX = /^(.*)_([a-z]+)$/
 const BOOLEAN_PATTERN = /^(true|false)$/i
 const NULL_PATTERN = /^null$/i
 const NUMERIC_PATTERN = /^-?\d+(\.\d+)?$/
+
+// Pre-build operator suffix Set for O(1) lookup: avoids regex.match() overhead
+// when checking if final underscore segment is a known operator
+const OPERATOR_SUFFIXES = new Set(['lt', 'lte', 'gt', 'gte', 'eq', 'ne', 'in', 'contains', 'startsWith', 'endsWith'])
 
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   const colonIdx = key.lastIndexOf(':')
