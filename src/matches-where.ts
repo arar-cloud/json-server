@@ -57,9 +57,10 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   const ops: WhereOperator[] = []
   const valueObj = value as Record<string, unknown>
   
-  for (const op of WHERE_OPERATORS) {
-    if (valueObj.hasOwnProperty(op)) {
-      ops.push(op)
+  // WHERE_OPERATORS is iterable array of strings, not keys
+  for (const op of Object.keys(valueObj)) {
+    if (WHERE_OPERATORS.includes(op as WhereOperator)) {
+      ops.push(op as WhereOperator)
     }
   }
 
