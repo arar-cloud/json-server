@@ -249,6 +249,19 @@ export class Service {
       results = sortOn(results, opts.sort.split(','))
     }
 
+    // Apply field selection before caching to reduce downstream serialization overhead
+    // Filtering before marshalling reduces JSON.stringify() time for large datasets
+    if (opts.select && opts.select.length > 0) {
+      const select = ensureArray(opts.select)
+      results = results.map((item) => {
+        const selectedItem: JsonObject = {}
+        for (const key of select) {
+          selectedItem[key] = item[key]
+        }
+        return selectedItem as Item
+      })
+    }
+
     // Cache filtered and sorted results for this request
     this.#requestCache.set(cacheKey, results)
 
