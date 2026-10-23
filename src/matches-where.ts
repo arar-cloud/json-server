@@ -111,43 +111,47 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
         // V8 can optimize switch as jump table; eliminates redundant lookups and branches
         // Each operator case evaluates only when present, reducing hot path overhead
         for (const operator of knownOps) {
+          const criterion = (op as any)[operator]
+          let result = false
+          
+          // Inlined operator logic for better cache locality and reduced call overhead
           switch (operator) {
             case 'lt':
-              if (!((field as any) < (op.lt as any))) return false
+              result = (field as any) < criterion
               break
             case 'lte':
-              if (!((field as any) <= (op.lte as any))) return false
+              result = (field as any) <= criterion
               break
             case 'gt':
-              if (!((field as any) > (op.gt as any))) return false
+              result = (field as any) > criterion
               break
             case 'gte':
-              if (!((field as any) >= (op.gte as any))) return false
+              result = (field as any) >= criterion
               break
             case 'eq':
-              if (!((field as any) === (op.eq as any))) return false
+              result = (field as any) === criterion
               break
             case 'ne':
-              if (!((field as any) !== (op.ne as any))) return false
+              result = (field as any) !== criterion
               break
             case 'in': {
-              const inValues = Array.isArray(op.in) ? op.in : [op.in]
-              if (!inValues.some((v) => (field as any) === (v as any))) return false
+              const inValues = Array.isArray(criterion) ? criterion : [criterion]
+              result = inValues.some((v) => (field as any) === (v as any))
               break
             }
             case 'contains':
-              if (typeof field !== 'string') return false
-              if (!field.toLowerCase().includes(String(op.contains).toLowerCase())) return false
+              result = typeof field === 'string' && field.toLowerCase().includes(String(criterion).toLowerCase())
               break
             case 'startsWith':
-              if (typeof field !== 'string') return false
-              if (!field.toLowerCase().startsWith(String(op.startsWith).toLowerCase())) return false
+              result = typeof field === 'string' && field.toLowerCase().startsWith(String(criterion).toLowerCase())
               break
             case 'endsWith':
-              if (typeof field !== 'string') return false
-              if (!field.toLowerCase().endsWith(String(op.endsWith).toLowerCase())) return false
+              result = typeof field === 'string' && field.toLowerCase().endsWith(String(criterion).toLowerCase())
               break
           }
+          
+          // Early termination: single condition check instead of inline negation per operator
+          if (!result) return false
         }
         continue
       }
