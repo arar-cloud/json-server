@@ -131,7 +131,7 @@ function parseListParams(req: any) {
 
   return {
     where,
-    sort: reserved[RESERVED_KEYS._sort],
+    sort: reserved[RESERVED_KEYS.get('_sort')!],
     page,
     perPage,
     embed,
