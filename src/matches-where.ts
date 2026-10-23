@@ -1,6 +1,6 @@
 import type { JsonObject } from 'type-fest'
 
-import { WHERE_OPERATORS, type WhereOperator } from './where-operators.ts'
+import type { WhereOperator } from './where-operators.ts'
 
 type OperatorObject = Partial<Record<WhereOperator, unknown>>
 
