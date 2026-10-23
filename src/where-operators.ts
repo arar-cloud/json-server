@@ -1,3 +1,27 @@
+// Type-specific fast path for numeric comparisons: check native type before coercion
+// Avoids repeated Number() overhead for already-numeric operands (hot path optimization)
+export function compareNumeric(a: unknown, b: unknown, op: 'lt' | 'lte' | 'gt' | 'gte'): boolean {
+  // Fast path: both already numbers
+  if (typeof a === 'number' && typeof b === 'number') {
+    switch (op) {
+      case 'lt': return a < b
+      case 'lte': return a <= b
+      case 'gt': return a > b
+      case 'gte': return a >= b
+    }
+  }
+  // Fallback: coerce and compare
+  const aNum = typeof a === 'number' ? a : (typeof a === 'string' ? Number(a) : NaN)
+  const bNum = typeof b === 'number' ? b : (typeof b === 'string' ? Number(b) : NaN)
+  if (Number.isNaN(aNum) || Number.isNaN(bNum)) return false
+  switch (op) {
+    case 'lt': return aNum < bNum
+    case 'lte': return aNum <= bNum
+    case 'gt': return aNum > bNum
+    case 'gte': return aNum >= bNum
+  }
+}
+
 // Numeric coercion helper: parse operands to native numeric type at operator construction time
 // instead of during every comparison, avoiding repeated Number() calls in inner loops
 export function coerceNumericOperand(value: unknown): number | unknown {
