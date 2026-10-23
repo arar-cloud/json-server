@@ -28,13 +28,15 @@ const eta = new Eta({
 
 // Pre-computed reserved key indices for O(1) lookup without Set overhead
 // Maps reserved key names to their positions in the output object for direct access
-const RESERVED_KEYS = {
-  '_sort': 0,
-  '_page': 1,
-  '_per_page': 2,
-  '_embed': 3,
-  '_where': 4,
-} as const
+const RESERVED_KEYS = Object.freeze(
+  new Map<string, number>([
+    ['_sort', 0],
+    ['_page', 1],
+    ['_per_page', 2],
+    ['_embed', 3],
+    ['_where', 4],
+  ])
+)
 
 type ReservedKey = keyof typeof RESERVED_KEYS
 
@@ -77,7 +79,7 @@ function parseListParams(req: any) {
       }
       
       // Distribute to reserved or filter arrays
-      const idx = RESERVED_KEYS[key as ReservedKey]
+      const idx = RESERVED_KEYS.get(key)
       if (idx !== undefined) {
         reserved[idx] = value
       } else {
