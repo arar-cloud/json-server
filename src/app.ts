@@ -38,8 +38,6 @@ const RESERVED_KEYS = Object.freeze(
   ])
 )
 
-type ReservedKey = keyof typeof RESERVED_KEYS
-
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
   
