@@ -27,13 +27,13 @@ function splitKey(key: string): { path: string; op: WhereOperator | null } {
     return isWhereOperator(op) ? { path, op } : { path, op: null }
   }
 
-  // Regex cached at module level (OPERATOR_STYLE_REGEX) to avoid recompilation per call
-  // Compatibility with v0.17 operator style (e.g. _lt, _gt)
-  const underscoreMatch = key.match(OPERATOR_STYLE_REGEX)
-  if (underscoreMatch) {
-    const path = underscoreMatch[1]
-    const op = underscoreMatch[2]
-    if (path && isWhereOperator(op)) {
+  // Direct string scan for underscore operator suffix: O(1) lookup via pre-built Set
+  // Replaces regex.match() to eliminate compilation and substring allocation overhead
+  const lastUnderscoreIdx = key.lastIndexOf('_')
+  if (lastUnderscoreIdx > 0 && lastUnderscoreIdx < key.length - 1) {
+    const path = key.slice(0, lastUnderscoreIdx)
+    const op = key.slice(lastUnderscoreIdx + 1)
+    if (OPERATOR_SUFFIXES.has(op as any) && isWhereOperator(op)) {
       return { path, op }
     }
   }
