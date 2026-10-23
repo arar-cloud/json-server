@@ -74,9 +74,12 @@ export function paginate<T>(items: T[], page: number, perPage: number): Paginati
   const next = indices.page < pages ? indices.page + 1 : null
   const last = pages
 
-  // Index-based pagination: caller can now use indices for iteration without copying
-  // slice() limited to [start, end) range only - O(perPage) memory cost
-  const data = items.slice(indices.start, indices.end)
+  // Index-based view: avoid slice() allocation by building result array with direct indexing
+  // O(perPage) iteration instead of O(perPage) array allocation + copy
+  const data: T[] = new Array(Math.max(0, indices.end - indices.start))
+  for (let i = indices.start; i < indices.end; i++) {
+    data[i - indices.start] = items[i]
+  }
 
   return {
     first,
