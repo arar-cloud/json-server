@@ -91,7 +91,7 @@ function parseListParams(req: any) {
   // Parse where: first from filter params, then override with raw _where if present
   const filterStr = filterParts.join('&')
   let where = parseWhere(filterStr)
-  const rawWhere = reserved[RESERVED_KEYS._where]
+  const rawWhere = reserved[RESERVED_KEYS.get('_where')!]
   if (typeof rawWhere === 'string') {
     try {
       const parsed = JSON.parse(rawWhere)
@@ -107,13 +107,13 @@ function parseListParams(req: any) {
   let page: number | undefined
   let perPage: number | undefined
   
-  const pageRaw = reserved[RESERVED_KEYS._page]
+  const pageRaw = reserved[RESERVED_KEYS.get('_page')!]
   if (pageRaw !== undefined) {
     const parsedPage = Number.parseInt(pageRaw, 10)
     page = Number.isNaN(parsedPage) ? undefined : parsedPage
   }
   
-  const perPageRaw = reserved[RESERVED_KEYS._per_page]
+  const perPageRaw = reserved[RESERVED_KEYS.get('_per_page')!]
   if (perPageRaw !== undefined) {
     const parsedPerPage = Number.parseInt(perPageRaw, 10)
     perPage = Number.isNaN(parsedPerPage) ? undefined : parsedPerPage

@@ -11,6 +11,21 @@ const BOOLEAN_PATTERN = /^(true|false)$/i
 const NULL_PATTERN = /^null$/i
 const NUMERIC_PATTERN = /^-?\d+(\.\d+)?$/
 
+// Fast character-based state machine for numeric detection to avoid regex on every coerceValue call
+function isNumericFast(value: string): boolean {
+  let hasDot = false
+  for (let i = value[0] === '-' ? 1 : 0; i < value.length; i++) {
+    const ch = value.charCodeAt(i)
+    if (ch === 46) { // '.'
+      if (hasDot) return false
+      hasDot = true
+    } else if (ch < 48 || ch > 57) { // '0'-'9'
+      return false
+    }
+  }
+  return value.length > (value[0] === '-' ? 1 : 0)
+}
+
 // Pre-build operator suffix Set for O(1) lookup: avoids regex.match() overhead
 // when checking if final underscore segment is a known operator
 const OPERATOR_SUFFIXES = new Set(['lt', 'lte', 'gt', 'gte', 'eq', 'ne', 'in', 'contains', 'startsWith', 'endsWith'])
@@ -44,11 +59,16 @@ function splitKey(key: string): { path: string; op: WhereOperator | null } {
 function setPathOp(root: JsonObject, path: string, op: WhereOperator, value: string): void {
   const fullPath = `${path}.${op}`
   if (op === 'in') {
-    setProperty(
-      root,
-      fullPath,
-      value.split(',').map((part) => coerceValue(part.trim())),
-    )
+    // Single-pass split with inline coercion to avoid intermediate array allocation
+    const parts: (string | number | boolean | null)[] = []
+    let partStart = 0
+    for (let i = 0; i <= value.length; i++) {
+      if (i === value.length || value[i] === ',') {
+        parts.push(coerceValue(value.slice(partStart, i).trim()))
+        partStart = i + 1
+      }
+    }
+    setProperty(root, fullPath, parts)
     return
   }
 
