@@ -8,28 +8,39 @@ export type PaginationResult<T> = {
   data: T[]
 }
 
-export function paginate<T>(items: T[], page: number, perPage: number): PaginationResult<T> {
-  const totalItems = items.length
-  // Use offset calculation: only slice the required page range instead of materializing full array
-  // This is the lazy version - slice() creates a new shallow array of only page items
-  const safePerPage = Number.isFinite(perPage) && perPage > 0 ? Math.floor(perPage) : 1
-  const pages = Math.max(1, Math.ceil(totalItems / safePerPage))
+export type PaginationIndices = {
+  start: number
+  end: number
+  total: number
+  page: number
+  perPage: number
+}
 
-  // Ensure page is within the valid range
+export function getPaginationIndices(total: number, page: number, perPage: number): PaginationIndices {
+  const safePerPage = Number.isFinite(perPage) && perPage > 0 ? Math.floor(perPage) : 1
+  const pages = Math.max(1, Math.ceil(total / safePerPage))
   const safePage = Number.isFinite(page) ? Math.floor(page) : 1
   const currentPage = Math.max(1, Math.min(safePage, pages))
 
+  const start = (currentPage - 1) * safePerPage
+  const end = Math.min(start + safePerPage, total)
+
+  return { start, end, total, page: currentPage, perPage: safePerPage }
+}
+
+export function paginate<T>(items: T[], page: number, perPage: number): PaginationResult<T> {
+  const totalItems = items.length
+  const indices = getPaginationIndices(totalItems, page, perPage)
+  
   const first = 1
-  const prev = currentPage > 1 ? currentPage - 1 : null
-  const next = currentPage < pages ? currentPage + 1 : null
+  const pages = Math.max(1, Math.ceil(totalItems / indices.perPage))
+  const prev = indices.page > 1 ? indices.page - 1 : null
+  const next = indices.page < pages ? indices.page + 1 : null
   const last = pages
 
-  const start = (currentPage - 1) * safePerPage
-  const end = Math.min(start + safePerPage, totalItems)
-  // Optimized: slice() only on required subset [start, end)
-  // Reduces memory allocation from O(n) to O(perPage) per paginated request
-  // For large datasets, this eliminates unnecessary full-array copies
-  const data = items.slice(start, end)
+  // Index-based pagination: caller can now use indices for iteration without copying
+  // slice() limited to [start, end) range only - O(perPage) memory cost
+  const data = items.slice(indices.start, indices.end)
 
   return {
     first,
