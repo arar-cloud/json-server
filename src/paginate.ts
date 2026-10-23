@@ -43,7 +43,7 @@ class PaginationMetadataCache {
     // Evict oldest entry if cache is full
     if (this.cache.size >= this.maxSize && !this.cache.has(k)) {
       const firstKey = this.cache.keys().next().value
-      this.cache.delete(firstKey)
+      if (firstKey !== undefined) this.cache.delete(firstKey)
     }
     this.cache.set(k, { total, pages })
   }
@@ -54,7 +54,7 @@ const paginationCache = new PaginationMetadataCache()
 export function getPaginationIndices(total: number, page: number, perPage: number): PaginationIndices {
   const safePerPage = Number.isFinite(perPage) && perPage > 0 ? Math.floor(perPage) : 1
 
-  x(1, Math.ceil(total / safePerPage))
+  const pages = Math.max(1, Math.ceil(total / safePerPage))
   const safePage = Number.isFinite(page) ? Math.floor(page) : 1
   const currentPage = Math.max(1, Math.min(safePage, pages))
 
