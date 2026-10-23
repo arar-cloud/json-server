@@ -129,9 +129,35 @@ function deleteDependents(db: Low<Data>, name: string, dependents: string[]) {
 export class Service {
   #db: Low<Data>
   #requestCache: Map<string, Item[]> = new Map()
+  #idIndex: Map<string, Map<string, Item>> = new Map()
 
   constructor(db: Low<Data>) {
     this.#db = db
+  }
+
+  #indexById(name: string, items: Item[]): Map<string, Item> {
+    const index = new Map<string, Item>()
+    for (const item of items) {
+      if (typeof item.id === 'string') {
+        index.set(item.id, item)
+      }
+    }
+    return index
+  }
+
+  #getIdIndex(name: string, items: Item[]): Map<string, Item> | null {
+    if (!this.#idIndex.has(name)) {
+      this.#idIndex.set(name, this.#indexById(name, items))
+    }
+    return this.#idIndex.get(name) ?? null
+  }
+
+  #invalidateIdIndex(name?: string): void {
+    if (name) {
+      this.#idIndex.delete(name)
+    } else {
+      this.#idIndex.clear()
+    }
   }
 
   #clearCache(): void {
@@ -189,6 +215,17 @@ export class Service {
         return paginate(cached, opts.page, perPage)
       }
       return cached
+    }
+
+    // Fast path: O(1) lookup for pure id equality queries (no embed, no sort, no pagination)
+    const where = opts.where ?? {}
+    if (Object.keys(where).length === 1 && 'id' in where && !opts.sort && !opts.page && ensureArray(opts.embed).length === 0) {
+      const idIndex = this.#getIdIndex(name, items)
+      if (idIndex) {
+        const found = idIndex.get(String(where.id))
+        this.#requestCache.set(cacheKey, found ? [found] : [])
+        return found ? [found] : []
+      }
     }
 
     let results = items
