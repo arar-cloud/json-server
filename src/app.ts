@@ -32,14 +32,18 @@ function parseListParams(req: any) {
   const params = new URLSearchParams(queryString)
 
   const filterParams = new URLSearchParams()
+  let rawWhere: string | null = null
+  
+  // Single pass: collect filter params and _where in one iteration
   for (const [key, value] of params.entries()) {
-    if (!RESERVED_QUERY_KEYS.has(key)) {
+    if (key === '_where') {
+      rawWhere = value
+    } else if (!RESERVED_QUERY_KEYS.has(key)) {
       filterParams.append(key, value)
     }
   }
 
   let where = parseWhere(filterParams.toString())
-  const rawWhere = params.get('_where')
   if (typeof rawWhere === 'string') {
     try {
       const parsed = JSON.parse(rawWhere)
