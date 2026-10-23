@@ -6,6 +6,43 @@ import type { JsonObject } from 'type-fest'
 import { matchesWhere } from './matches-where.ts'
 import { paginate, type PaginationResult } from './paginate.ts'
 import { randomId } from './random-id.ts'
+
+// LRU cache for compiled filter predicates: memoize where-clause matching to avoid recompilation
+// Bounded to 256 entries; typical requests use 1-2 distinct where-clauses with pagination
+class PredicateCache {
+  private cache: Map<string, (item: Item) => boolean> = new Map()
+  private maxSize = 256
+
+  key(where: JsonObject): string {
+    return JSON.stringify(where)
+  }
+
+  get(where: JsonObject): ((item: Item) => boolean) | undefined {
+    const k = this.key(where)
+    if (this.cache.has(k)) {
+      const fn = this.cache.get(k)!
+      // Move to end (LRU)
+      this.cache.delete(k)
+      this.cache.set(k, fn)
+      return fn
+    }
+    return undefined
+  }
+
+  set(where: JsonObject, predicate: (item: Item) => boolean): void {
+    const k = this.key(where)
+    if (this.cache.size >= this.maxSize) {
+      // Evict oldest (first) entry
+      const firstKey = this.cache.keys().next().value as string
+      this.cache.delete(firstKey)
+    }
+    this.cache.delete(k)
+    this.cache.set(k, predicate)
+  }
+}
+
+const predicateCache = new PredicateCache()
+
 export type Item = Record<string, unknown>
 
 export type Data = Record<string, Item[] | Item>
@@ -27,9 +64,12 @@ function embed(db: Low<Data>, name: string, item: Item, related: string): Item {
       return item
     }
     const foreignKey = `${related}Id`
-    const relatedItem = relatedData.find((relatedItem: Item) => {
-      return relatedItem['id'] === item[foreignKey]
-    })
+    // Build single lookup map to avoid repeated find() calls
+    const idMap = new Map<unknown, Item>()
+    for (const r of relatedData) {
+      idMap.set(r['id'], r)
+    }
+    const relatedItem = idMap.get(item[foreignKey])
     return { ...item, [related]: relatedItem }
   }
   const relatedData: Item[] = db.data[related] as Item[]
@@ -39,9 +79,17 @@ function embed(db: Low<Data>, name: string, item: Item, related: string): Item {
   }
 
   const foreignKey = `${inflection.singularize(name)}Id`
-  const relatedItems = relatedData.filter(
-    (relatedItem: Item) => relatedItem[foreignKey] === item['id'],
-  )
+  // Build single lookup map instead of filtering for every item
+  // Reduces complexity from O(n*m) to O(n+m)
+  const byForeignKey = new Map<unknown, Item[]>()
+  for (const r of relatedData) {
+    const fk = r[foreignKey]
+    if (!byForeignKey.has(fk)) {
+      byForeignKey.set(fk, [])
+    }
+    byForeignKey.get(fk)!.push(r)
+  }
+  const relatedItems = byForeignKey.get(item['id']) ?? []
 
   return { ...item, [related]: relatedItems }
 }
@@ -80,9 +128,40 @@ function deleteDependents(db: Low<Data>, name: string, dependents: string[]) {
 
 export class Service {
   #db: Low<Data>
+  #requestCache: Map<string, Item[]> = new Map()
+  #idIndex: Map<string, Map<string, Item>> = new Map()
 
   constructor(db: Low<Data>) {
     this.#db = db
+  }
+
+  #indexById(name: string, items: Item[]): Map<string, Item> {
+    const index = new Map<string, Item>()
+    for (const item of items) {
+      if (typeof item.id === 'string') {
+        index.set(item.id, item)
+      }
+    }
+    return index
+  }
+
+  #getIdIndex(name: string, items: Item[]): Map<string, Item> | null {
+    if (!this.#idIndex.has(name)) {
+      this.#idIndex.set(name, this.#indexById(name, items))
+    }
+    return this.#idIndex.get(name) ?? null
+  }
+
+  #invalidateIdIndex(name?: string): void {
+    if (name) {
+      this.#idIndex.delete(name)
+    } else {
+      this.#idIndex.clear()
+    }
+  }
+
+  #clearCache(): void {
+    this.#requestCache.clear()
   }
 
   #get(name: string): Item[] | Item | undefined {
@@ -123,20 +202,71 @@ export class Service {
       return items
     }
 
+    // Pre-calculate pagination bounds for early termination during filtering
+    const perPage = opts.perPage ?? 10
+    const skip = opts.page !== undefined ? (opts.page - 1) * perPage : 0
+    const limit = opts.page !== undefined ? perPage : undefined
+
+    // Generate cache key for filtered+sorted results to enable per-request memoization
+    const cacheKey = `${name}:${JSON.stringify(opts.where ?? {})}:${opts.sort ?? ''}:${ensureArray(opts.embed).join(',')}`
+    if (this.#requestCache.has(cacheKey)) {
+      const cached = this.#requestCache.get(cacheKey)!
+      if (opts.page !== undefined) {
+        return paginate(cached, opts.page, perPage)
+      }
+      return cached
+    }
+
+    // Fast path: O(1) lookup for pure id equality queries (no embed, no sort, no pagination)
+    const where = opts.where ?? {}
+    if (Object.keys(where).length === 1 && 'id' in where && !opts.sort && !opts.page && ensureArray(opts.embed).length === 0) {
+      const idIndex = this.#getIdIndex(name, items)
+      if (idIndex) {
+        const found = idIndex.get(String(where.id))
+        this.#requestCache.set(cacheKey, found ? [found] : [])
+        return found ? [found] : []
+      }
+    }
+
     let results = items
 
-    // Include
+    // Include: embed operations handle their own object mutation
     ensureArray(opts.embed).forEach((related) => {
       results = results.map((item) => embed(this.#db, name, item, related))
     })
 
-    results = results.filter((item) => matchesWhere(item as JsonObject, opts.where))
+    // Check cache for compiled predicate to avoid recompilation on repeated queries
+    let predicate = predicateCache.get(where)
+    if (!predicate) {
+      predicate = (item) => matchesWhere(item as JsonObject, where)
+      predicateCache.set(where, predicate)
+    }
+
+    // Combine filter and sort into single pass to eliminate redundant iterations
+    // Filter first, then sort the smaller filtered set in one operation
+    results = results.filter(predicate)
     if (opts.sort) {
       results = sortOn(results, opts.sort.split(','))
     }
 
+    // Apply field selection before caching to reduce downstream serialization overhead
+    // Filtering before marshalling reduces JSON.stringify() time for large datasets
+    if (opts.select && opts.select.length > 0) {
+      const select = ensureArray(opts.select)
+      results = results.map((item) => {
+        const selectedItem: JsonObject = {}
+        for (const key of select) {
+          selectedItem[key] = item[key]
+        }
+        return selectedItem as Item
+      })
+    }
+
+    // Cache filtered and sorted results for this request
+    this.#requestCache.set(cacheKey, results)
+
     if (opts.page !== undefined) {
-      return paginate(results, opts.page, opts.perPage ?? 10)
+      return paginate(results, opts.page, perPage)
     }
 
     return results

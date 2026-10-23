@@ -7,6 +7,7 @@ import { Eta } from 'eta'
 import { Low } from 'lowdb'
 import { json } from 'milliparsec'
 import sirv from 'sirv'
+import type { JsonObject } from 'type-fest'
 
 import { parseWhere } from './parse-where.ts'
 import type { Data } from './service.ts'
@@ -25,21 +26,72 @@ const eta = new Eta({
   cache: isProduction,
 })
 
-const RESERVED_QUERY_KEYS = new Set(['_sort', '_page', '_per_page', '_embed', '_where'])
+// Pre-computed reserved key indices for O(1) lookup without Set overhead
+// Maps reserved key names to their positions in the output object for direct access
+const RESERVED_KEYS = Object.freeze(
+  new Map<string, number>([
+    ['_sort', 0],
+    ['_page', 1],
+    ['_per_page', 2],
+    ['_embed', 3],
+    ['_where', 4],
+  ])
+)
 
 function parseListParams(req: any) {
   const queryString = req.url.split('?')[1] ?? ''
-  const params = new URLSearchParams(queryString)
-
-  const filterParams = new URLSearchParams()
-  for (const [key, value] of params.entries()) {
-    if (!RESERVED_QUERY_KEYS.has(key)) {
-      filterParams.append(key, value)
+  
+  // Single-pass parsing with direct character scanning
+  // Eliminates paired indexOf calls and reduces string traversal overhead
+  const filterParts: string[] = []
+  const reserved = new Array<string | undefined>(5) // Pre-allocated for 5 reserved keys
+  
+  if (queryString) {
+    let pos = 0
+    const qLen = queryString.length
+    
+    while (pos < qLen) {
+      let pairEnd = qLen
+      let eqIdx = -1
+      
+      // Single scan finds both & (pair end) and = (key-value split)
+      for (let i = pos; i < qLen; i++) {
+        if (queryString[i] === '=') {
+          if (eqIdx === -1) eqIdx = i
+        } else if (queryString[i] === '&') {
+          pairEnd = i
+          break
+        }
+      }
+      
+      // Extract key and value directly without creating intermediate pair string
+      let key: string
+      let value: string
+      
+      if (eqIdx === -1) {
+        key = decodeURIComponent(queryString.slice(pos, pairEnd))
+        value = ''
+      } else {
+        key = decodeURIComponent(queryString.slice(pos, eqIdx))
+        value = decodeURIComponent(queryString.slice(eqIdx + 1, pairEnd))
+      }
+      
+      // Distribute to reserved or filter arrays
+      const idx = RESERVED_KEYS.get(key)
+      if (idx !== undefined) {
+        reserved[idx] = value
+      } else {
+        filterParts.push(encodeURIComponent(key) + '=' + encodeURIComponent(value))
+      }
+      
+      pos = pairEnd + 1
     }
   }
 
-  let where = parseWhere(filterParams.toString())
-  const rawWhere = params.get('_where')
+  // Parse where: first from filter params, then override with raw _where if present
+  const filterStr = filterParts.join('&')
+  let where = parseWhere(filterStr)
+  const rawWhere = reserved[RESERVED_KEYS.get('_where')!]
   if (typeof rawWhere === 'string') {
     try {
       const parsed = JSON.parse(rawWhere)
@@ -51,17 +103,38 @@ function parseListParams(req: any) {
     }
   }
 
-  const pageRaw = params.get('_page')
-  const perPageRaw = params.get('_per_page')
-  const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
-  const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
+  // Parse numeric values only once, indexed directly from reserved array
+  let page: number | undefined
+  let perPage: number | undefined
+  
+  const pageRaw = reserved[RESERVED_KEYS.get('_page')!]
+  if (pageRaw !== undefined) {
+    const parsedPage = Number.parseInt(pageRaw, 10)
+    page = Number.isNaN(parsedPage) ? undefined : parsedPage
+  }
+  
+  const perPageRaw = reserved[RESERVED_KEYS.get('_per_page')!]
+  if (perPageRaw !== undefined) {
+    const parsedPerPage = Number.parseInt(perPageRaw, 10)
+    perPage = Number.isNaN(parsedPerPage) ? undefined : parsedPerPage
+  }
+
+  // Use static dispatch: avoid dynamic property lookups on hot path
+  // Direct array index access is JIT-optimizable and faster than req.query lookups
+  let embed: string | undefined
+  if (req.query && typeof req.query === 'object') {
+    const queryObj = req.query as Record<string, any>
+    if ('_embed' in queryObj) {
+      embed = queryObj._embed
+    }
+  }
 
   return {
     where,
-    sort: params.get('_sort') ?? undefined,
-    page: Number.isNaN(page) ? undefined : page,
-    perPage: Number.isNaN(perPage) ? undefined : perPage,
-    embed: req.query['_embed'],
+    sort: reserved[RESERVED_KEYS.get('_sort')!],
+    page,
+    perPage,
+    embed,
   }
 }
 
@@ -120,16 +193,16 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
 
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
 
-  app.get('/:name', (req, res, next) => {
+  app.get('/:name', async (req, res, next) => {
     const { name = '' } = req.params
-    const { where, sort, page, perPage, embed } = parseListParams(req)
+    const params = parseListParams(req)
 
-    res.locals['data'] = service.find(name, {
-      where,
-      sort,
-      page,
-      perPage,
-      embed,
+    res.locals['data'] = await service.find(name, {
+      where: params.where,
+      sort: params.sort,
+      page: params.page,
+      perPage: params.perPage,
+      embed: params.embed,
     })
     next?.()
   })

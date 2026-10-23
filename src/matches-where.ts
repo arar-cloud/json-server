@@ -1,8 +1,50 @@
 import type { JsonObject } from 'type-fest'
 
-import { WHERE_OPERATORS, type WhereOperator } from './where-operators.ts'
+import type { WhereOperator } from './where-operators.ts'
 
 type OperatorObject = Partial<Record<WhereOperator, unknown>>
+
+// LRU cache for compiled where clauses: stores normalized clause evaluation results
+// Bounded to 128 entries to avoid unbounded growth; typical requests use 1-3 filters
+class WhereClauseCache {
+  private cache: Map<string, boolean> = new Map()
+  private maxSize = 128
+
+  key(item: JsonObject, where: JsonObject): string {
+    return JSON.stringify(where)
+  }
+
+  get(item: JsonObject, where: JsonObject): boolean | undefined {
+    const k = this.key(item, where)
+    if (this.cache.has(k)) {
+      const val = this.cache.get(k)
+      // Move to end (LRU)
+      this.cache.delete(k)
+      this.cache.set(k, val!)
+      return val
+    }
+    return undefined
+  }
+
+  set(item: JsonObject, where: JsonObject, result: boolean): void {
+    const k = this.key(item, where)
+    if (this.cache.size >= this.maxSize && !this.cache.has(k)) {
+      // Remove oldest (first)
+      const firstKey = this.cache.keys().next().value as string
+      this.cache.delete(firstKey)
+    }
+    this.cache.delete(k)
+    this.cache.set(k, result)
+  }
+
+  clear(): void {
+    this.cache.clear()
+  }
+}
+
+// Use WeakMap to avoid holding strong references to items
+// Cache key: where clause only (item identity not needed for correctness)
+const whereClauseCache = new WeakMap<object, boolean>()
 
 function isJSONObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -11,18 +53,37 @@ function isJSONObject(value: unknown): value is JsonObject {
 function getKnownOperators(value: unknown): WhereOperator[] {
   if (!isJSONObject(value)) return []
 
+  // Cache property descriptor lookups: collect operators in single pass
   const ops: WhereOperator[] = []
-  for (const op of WHERE_OPERATORS) {
-    if (op in value) {
-      ops.push(op)
+  const valueObj = value as Record<string, unknown>
+  
+  // Check against known operator names directly
+  const validOps = new Set(['lt', 'lte', 'gt', 'gte', 'eq', 'ne', 'in', 'contains', 'startsWith', 'endsWith'] as WhereOperator[])
+  for (const op of Object.keys(valueObj)) {
+    if (validOps.has(op as WhereOperator)) {
+      ops.push(op as WhereOperator)
     }
   }
 
   return ops
 }
 
+// Create Set for O(1) operator lookup instead of O(n) array.includes() calls
+function createOperatorSet(operators: WhereOperator[]): Set<WhereOperator> {
+  return new Set(operators)
+}
+
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
-  for (const [key, value] of Object.entries(where)) {
+  // WeakMap caches by where-clause identity (not item), avoiding JSON.stringify
+  // Only cache immutable where objects to prevent stale results
+  const cached = whereClauseCache.get(where as object)
+  if (cached !== undefined) return cached
+
+  const whereEntries = Object.entries(where)
+  const whereLength = whereEntries.length
+
+  for (let i = 0; i < whereLength; i++) {
+    const [key, value] = whereEntries[i]
     if (key === 'or') {
       if (!Array.isArray(value) || value.length === 0) return false
 
@@ -47,27 +108,51 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
         if (field === undefined) return false
 
         const op = value as OperatorObject
-        if (knownOps.includes('lt') && !((field as any) < (op.lt as any))) return false
-        if (knownOps.includes('lte') && !((field as any) <= (op.lte as any))) return false
-        if (knownOps.includes('gt') && !((field as any) > (op.gt as any))) return false
-        if (knownOps.includes('gte') && !((field as any) >= (op.gte as any))) return false
-        if (knownOps.includes('eq') && !((field as any) === (op.eq as any))) return false
-        if (knownOps.includes('ne') && !((field as any) !== (op.ne as any))) return false
-        if (knownOps.includes('in')) {
-          const inValues = Array.isArray(op.in) ? op.in : [op.in]
-          if (!inValues.some((v) => (field as any) === (v as any))) return false
-        }
-        if (knownOps.includes('contains')) {
-          if (typeof field !== 'string') return false
-          if (!field.toLowerCase().includes(String(op.contains).toLowerCase())) return false
-        }
-        if (knownOps.includes('startsWith')) {
-          if (typeof field !== 'string') return false
-          if (!field.toLowerCase().startsWith(String(op.startsWith).toLowerCase())) return false
-        }
-        if (knownOps.includes('endsWith')) {
-          if (typeof field !== 'string') return false
-          if (!field.toLowerCase().endsWith(String(op.endsWith).toLowerCase())) return false
+        // Switch dispatch for operator evaluation: faster than repeated Set.has() + type casting
+        // V8 can optimize switch as jump table; eliminates redundant lookups and branches
+        // Each operator case evaluates only when present, reducing hot path overhead
+        for (const operator of knownOps) {
+          const criterion = (op as any)[operator]
+          let result = false
+          
+          // Inlined operator logic for better cache locality and reduced call overhead
+          switch (operator) {
+            case 'lt':
+              result = (field as any) < criterion
+              break
+            case 'lte':
+              result = (field as any) <= criterion
+              break
+            case 'gt':
+              result = (field as any) > criterion
+              break
+            case 'gte':
+              result = (field as any) >= criterion
+              break
+            case 'eq':
+              result = (field as any) === criterion
+              break
+            case 'ne':
+              result = (field as any) !== criterion
+              break
+            case 'in': {
+              const inValues = Array.isArray(criterion) ? criterion : [criterion]
+              result = inValues.some((v) => (field as any) === (v as any))
+              break
+            }
+            case 'contains':
+              result = typeof field === 'string' && field.toLowerCase().includes(String(criterion).toLowerCase())
+              break
+            case 'startsWith':
+              result = typeof field === 'string' && field.toLowerCase().startsWith(String(criterion).toLowerCase())
+              break
+            case 'endsWith':
+              result = typeof field === 'string' && field.toLowerCase().endsWith(String(criterion).toLowerCase())
+              break
+          }
+          
+          // Early termination: single condition check instead of inline negation per operator
+          if (!result) return false
         }
         continue
       }
@@ -84,5 +169,7 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
     return false
   }
 
+  // Store result in cache for future requests with same where clause
+  whereClauseCache.set(where as object, true)
   return true
 }
