@@ -1,3 +1,5 @@
+import { coerceNumericOperand } from './where-operators.ts'
+
 import { setProperty } from 'dot-prop'
 import type { JsonObject } from 'type-fest'
 
@@ -88,7 +90,7 @@ export function parseWhere(query: string): JsonObject {
 
     const pairEnd = ampIdx
     if (pairEnd > scanStart) {
-      const rawKey = eqIdx === -1 
+      const rawKey = eqIdx === -1
         ? decodeURIComponent(query.slice(scanStart, pairEnd))
         : decodeURIComponent(query.slice(scanStart, eqIdx))
       const rawValue = eqIdx === -1
