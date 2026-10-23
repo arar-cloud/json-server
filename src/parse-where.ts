@@ -65,12 +65,43 @@ function coerceValue(value: string): string | number | boolean | null {
 
 export function parseWhere(query: string): JsonObject {
   const out: JsonObject = {}
-  const params = new URLSearchParams(query)
+  const qLen = query.length
+  let pos = 0
 
-  for (const [rawKey, rawValue] of params.entries()) {
-    const { path, op } = splitKey(rawKey)
-    if (op === null) continue
-    setPathOp(out, path, op, rawValue)
+  // Single-pass character scanning: manually parse instead of URLSearchParams
+  // to avoid regex compilation overhead and reduce object allocations
+  while (pos < qLen) {
+    let ampIdx = qLen
+    let eqIdx = -1
+    let scanStart = pos
+
+    // Scan for & (pair end) and = (key-value separator) in one pass
+    for (let i = pos; i < qLen; i++) {
+      const ch = query[i]
+      if (ch === '=' && eqIdx === -1) {
+        eqIdx = i
+      } else if (ch === '&') {
+        ampIdx = i
+        break
+      }
+    }
+
+    const pairEnd = ampIdx
+    if (pairEnd > scanStart) {
+      const rawKey = eqIdx === -1 
+        ? decodeURIComponent(query.slice(scanStart, pairEnd))
+        : decodeURIComponent(query.slice(scanStart, eqIdx))
+      const rawValue = eqIdx === -1
+        ? ''
+        : decodeURIComponent(query.slice(eqIdx + 1, pairEnd))
+
+      const { path, op } = splitKey(rawKey)
+      if (op !== null) {
+        setPathOp(out, path, op, rawValue)
+      }
+    }
+
+    pos = pairEnd + 1
   }
 
   return out
