@@ -214,6 +214,28 @@ export class Service {
     return nextItem
   }
 
+  public update(resource: string, id: string | number, body: Item): Item {
+    // Validate all property keys to prevent prototype pollution during PATCH
+    for (const key of Object.keys(body)) {
+      if (!isSafePropertyKey(key)) {
+        throw new Error(
+          `Unsafe property key in request body: ${key}. Cannot update with dangerous properties.`,
+        )
+      }
+    }
+
+    const items = this.#db.data[resource] as Item[]
+    const item = items.find((item) => String(item.id) === String(id))
+
+    if (!item) {
+      throw new Error(`Item not found`)
+    }
+
+    Object.assign(item, body)
+    this.#db.write()
+    return item
+  }
+
   async update(name: string, body: Item = {}): Promise<Item | undefined> {
     return this.#updateOrPatch(name, body, false)
   }
