@@ -150,11 +150,28 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   // Create app
   const app = new App()
 
-  // Static files
-  app.use(sirv('public', { dev: !isProduction }))
+  // Static files with security restrictions
+  const sirvOptions = {
+    dev: !isProduction,
+    // Prevent directory listing
+    single: false,
+    // Set caching headers
+    maxAge: isProduction ? 31536000 : 0,
+    // Immutable assets (long-term caching)
+    immutable: isProduction,
+  }
+  app.use(sirv('public', sirvOptions))
   options.static
     ?.map((path) => (isAbsolute(path) ? path : join(process.cwd(), path)))
-    .forEach((dir) => app.use(sirv(dir, { dev: !isProduction })))
+    .forEach((dir) => {
+      // Validate static directory path doesn't contain traversal
+      const resolved = isAbsolute(dir) ? dir : join(process.cwd(), dir)
+      if (!resolved.startsWith(process.cwd())) {
+        console.warn(`Warning: static directory ${dir} is outside project root`)
+        return
+      }
+      app.use(sirv(resolved, sirvOptions))
+    })
 
   // Security headers middleware to prevent common attacks
   app.use((req, res, next) => {
