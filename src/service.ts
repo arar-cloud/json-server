@@ -24,7 +24,26 @@ function isSafePropertyKey(key: string): boolean {
     'prototype',
     '__constructor__',
   ]
-  return !dangerousKeys.includes(key.toLowerCase())
+  if (!dangerousKeys.includes(key.toLowerCase())) {
+    return true
+  }
+  throw new Error(`Unsafe property key detected: ${key}`)
+}
+
+/**
+ * Recursively validates all keys in an object to prevent prototype pollution
+ */
+function validateObjectKeys(obj: Item, maxDepth = 10, currentDepth = 0): void {
+  if (currentDepth > maxDepth) {
+    throw new Error('Object nesting depth exceeded')
+  }
+  for (const key of Object.keys(obj)) {
+    isSafePropertyKey(key)
+    const value = obj[key]
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      validateObjectKeys(value as Item, maxDepth, currentDepth + 1)
+    }
+  }
 }
 
 export type PaginatedItems = PaginationResult<Item>
