@@ -178,6 +178,9 @@ export class Service {
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
 
+    // Validate all property keys before storing
+    validateObjectKeys(data)
+
     const item = { ...data, id: randomId() }
     items.push(item)
 
