@@ -33,6 +33,12 @@ export function whereOperator(
     )
   }
 
+  // Type validation for operator inputs
+  if (param === null || (typeof param !== 'string' && typeof param !== 'number' && typeof param !== 'boolean' && !Array.isArray(param))) {
+    recursionDepth--
+    return false
+  }
+
   try {
     return executeWhereOperator(op, param, value)
   } finally {
