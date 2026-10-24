@@ -9,6 +9,7 @@ import { json } from 'milliparsec'
 import sirv from 'sirv'
 
 import { parseWhere } from './parse-where.ts'
+import { validatePaginationParams, validateStringInput } from './validate.ts'
 import type { Data } from './service.ts'
 import { isItem, Service } from './service.ts'
 
