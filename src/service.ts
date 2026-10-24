@@ -14,6 +14,38 @@ export function isItem(obj: unknown): obj is Item {
   return typeof obj === 'object' && obj !== null && !Array.isArray(obj)
 }
 
+/**
+ * Validates that a property key is safe and not a prototype pollution vector
+ */
+function isSafePropertyKey(key: string): boolean {
+  const dangerousKeys = [
+    '__proto__',
+    'constructor',
+    'prototype',
+    '__constructor__',
+  ]
+  if (!dangerousKeys.includes(key.toLowerCase())) {
+    return true
+  }
+  throw new Error(`Unsafe property key detected: ${key}`)
+}
+
+/**
+ * Recursively validates all keys in an object to prevent prototype pollution
+ */
+function validateObjectKeys(obj: Item, maxDepth = 10, currentDepth = 0): void {
+  if (currentDepth > maxDepth) {
+    throw new Error('Object nesting depth exceeded')
+  }
+  for (const key of Object.keys(obj)) {
+    isSafePropertyKey(key)
+    const value = obj[key]
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      validateObjectKeys(value as Item, maxDepth, currentDepth + 1)
+    }
+  }
+}
+
 export type PaginatedItems = PaginationResult<Item>
 
 function ensureArray(arg: string | string[] = []): string[] {
@@ -146,6 +178,9 @@ export class Service {
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
 
+    // Validate all property keys before storing
+    validateObjectKeys(data)
+
     const item = { ...data, id: randomId() }
     items.push(item)
 
@@ -154,6 +189,9 @@ export class Service {
   }
 
   async #updateOrPatch(name: string, body: Item = {}, isPatch: boolean): Promise<Item | undefined> {
+    // Validate all property keys to prevent prototype pollution
+    validateObjectKeys(body)
+
     const item = this.#get(name)
     if (item === undefined || Array.isArray(item)) return
 
@@ -169,6 +207,9 @@ export class Service {
     body: Item = {},
     isPatch: boolean,
   ): Promise<Item | undefined> {
+    // Validate all property keys to prevent prototype pollution
+    validateObjectKeys(body)
+
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
 
@@ -188,6 +229,8 @@ export class Service {
   }
 
   async patch(name: string, body: Item = {}): Promise<Item | undefined> {
+    // Validate all property keys to prevent prototype pollution
+    validateObjectKeys(body)
     return this.#updateOrPatch(name, body, true)
   }
 

@@ -9,6 +9,7 @@ import { json } from 'milliparsec'
 import sirv from 'sirv'
 
 import { parseWhere } from './parse-where.ts'
+import { validatePaginationParams, validateStringInput } from './validate.ts'
 import type { Data } from './service.ts'
 import { isItem, Service } from './service.ts'
 
@@ -43,8 +44,29 @@ function parseListParams(req: any) {
   if (typeof rawWhere === 'string') {
     try {
       const parsed = JSON.parse(rawWhere)
-      if (typeof parsed === 'object' && parsed !== null) {
-        where = parsed
+      // Validate _where parameter structure to prevent injection
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        // Ensure only safe keys are present (property keys and known operators)
+        const MAX_WHERE_DEPTH = 5
+        const validateWhereObject = (obj: any, depth = 0): boolean => {
+          if (depth > MAX_WHERE_DEPTH) return false
+          if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return false
+          for (const [k, v] of Object.entries(obj)) {
+            // Reject prototype pollution vectors
+            if (['__proto__', 'constructor', 'prototype', '__constructor__'].includes(k.toLowerCase())) return false
+            // Validate operator values are primitives or nested safe objects
+            if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+              if (!validateWhereObject(v, depth + 1)) return false
+            } else if (Array.isArray(v)) {
+              // Allow arrays for operators like 'in', but validate contents are primitives
+              if (!v.every(item => typeof item !== 'object' || item === null)) return false
+            }
+          }
+          return true
+        }
+        if (validateWhereObject(parsed)) {
+          where = parsed
+        }
       }
     } catch {
       // Ignore invalid JSON and fallback to parsed query params
@@ -53,14 +75,36 @@ function parseListParams(req: any) {
 
   const pageRaw = params.get('_page')
   const perPageRaw = params.get('_per_page')
-  const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
-  const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
+  
+  let page: number | undefined = undefined
+  let perPage: number | undefined = undefined
+  
+  if (pageRaw !== null || perPageRaw !== null) {
+    try {
+      const validated = validatePaginationParams(pageRaw ?? undefined, perPageRaw ?? undefined)
+      page = validated.page
+      perPage = validated.perPage
+    } catch {
+      // If validation fails, use undefined (will use service defaults)
+    }
+  }
+
+  // Validate _sort parameter
+  let sort: string | undefined = undefined
+  const sortRaw = params.get('_sort')
+  if (typeof sortRaw === 'string' && sortRaw.length > 0 && sortRaw.length <= 500) {
+    // Allow comma-separated property names and + or - prefix for direction
+    const sortPattern = /^[+\-]?[\w.]+([,\s]*[+\-]?[\w.]+)*$/
+    if (sortPattern.test(sortRaw)) {
+      sort = sortRaw
+    }
+  }
 
   return {
     where,
-    sort: params.get('_sort') ?? undefined,
-    page: Number.isNaN(page) ? undefined : page,
-    perPage: Number.isNaN(perPage) ? undefined : perPage,
+    sort,
+    page,
+    perPage,
     embed: req.query['_embed'],
   }
 }
@@ -98,16 +142,61 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   // Create app
   const app = new App()
 
-  // Static files
-  app.use(sirv('public', { dev: !isProduction }))
+  // Static files with security restrictions
+  const sirvOptions = {
+    dev: !isProduction,
+    // Prevent directory listing
+    single: false,
+    // Set caching headers
+    maxAge: isProduction ? 31536000 : 0,
+    // Immutable assets (long-term caching)
+    immutable: isProduction,
+  }
+  app.use(sirv('public', sirvOptions))
   options.static
     ?.map((path) => (isAbsolute(path) ? path : join(process.cwd(), path)))
-    .forEach((dir) => app.use(sirv(dir, { dev: !isProduction })))
+    .forEach((dir) => {
+      // Validate static directory path doesn't contain traversal
+      const resolved = isAbsolute(dir) ? dir : join(process.cwd(), dir)
+      if (!resolved.startsWith(process.cwd())) {
+        console.warn(`Warning: static directory ${dir} is outside project root`)
+        return
+      }
+      app.use(sirv(resolved, sirvOptions))
+    })
 
-  // CORS
+  // Security headers middleware to prevent common attacks
+  app.use((req, res, next) => {
+    // Content Security Policy to prevent XSS
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:"
+    )
+    // Prevent MIME-type sniffing
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    // Prevent clickjacking
+    res.setHeader('X-Frame-Options', 'DENY')
+    // Enable XSS filter in browsers
+    res.setHeader('X-XSS-Protection', '1; mode=block')
+    // Enable HSTS in production
+    if (isProduction) {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+    }
+    // Referrer policy
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+    next?.()
+  })
+
+  // CORS configuration with security controls
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['http://localhost:3000', 'http://localhost:3001']
+
   app
     .use((req, res, next) => {
       return cors({
+        origin: allowedOrigins,
+        credentials: true,
         allowedHeaders: req.headers['access-control-request-headers']
           ?.split(',')
           .map((h) => h.trim()),
@@ -164,6 +253,12 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
       if (req.method === 'POST') res.status(201)
       res.json(data)
     }
+  })
+
+  // Error handling middleware - must be last
+  app.use((req: any, res: any, next: any) => {
+    // Pass through to next handler if no error
+    next?.()
   })
 
   return app

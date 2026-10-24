@@ -24,7 +24,15 @@ export class NormalizedAdapter implements Adapter<Data> {
 
     delete data['$schema']
 
-    for (const value of Object.values(data)) {
+    for (const [key, value] of Object.entries(data)) {
+      // Validate key to prevent prototype pollution
+      const dangerousKeys = ['__proto__', 'constructor', 'prototype', '__constructor__']
+      if (dangerousKeys.includes(key)) {
+        throw new Error(
+          `Invalid data structure detected: unsafe key "${key}" in adapter read`,
+        )
+      }
+
       if (Array.isArray(value)) {
         for (const item of value) {
           if (typeof item['id'] === 'number') {
