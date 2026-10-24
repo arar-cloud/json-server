@@ -203,5 +203,21 @@ app.use(json({ limit: maxBodySize }))
     }
   })
 
+  // Error handling middleware - must be last
+  app.use((error: Error, req: any, res: any, next: any) => {
+    console.error('Application error:', error)
+
+    // Do not leak stack traces or internal details to clients
+    const isDevelopment = process.env.NODE_ENV === 'development'
+    const status = (error as any).status || 500
+    const message = isDevelopment ? error.message : 'Internal server error'
+
+    res.status(status).json({
+      error: message,
+      // Only include stack trace in development
+      ...(isDevelopment && { stack: error.stack }),
+    })
+  })
+
   return app
 }
