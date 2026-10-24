@@ -3,6 +3,36 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
+// Dangerous property names that can cause prototype pollution
+const DANGEROUS_KEYS = [
+  '__proto__',
+  'constructor',
+  'prototype',
+  '__constructor__',
+]
+
+function validateKeyForInjection(key: string): void {
+  // Validate key format and length
+  if (typeof key !== 'string' || key.length === 0 || key.length > 1000) {
+    throw new Error(
+      'Invalid query parameter key: must be a non-empty string under 1000 characters',
+    )
+  }
+
+  // Check direct dangerous keys
+  if (DANGEROUS_KEYS.includes(key.toLowerCase())) {
+    throw new Error(`Unsafe property key detected: ${key}`)
+  }
+
+  // Check dangerous keys in path segments
+  const segments = key.split('.')
+  for (const segment of segments) {
+    if (DANGEROUS_KEYS.includes(segment.toLowerCase())) {
+      throw new Error(`Unsafe property path detected: ${key}`)
+    }
+  }
+}
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
@@ -60,6 +90,7 @@ export function parseWhere(query: string): JsonObject {
   const params = new URLSearchParams(query)
 
   for (const [rawKey, rawValue] of params.entries()) {
+    validateKeyForInjection(rawKey)
     const { path, op } = splitKey(rawKey)
     if (op === null) continue
     setPathOp(out, path, op, rawValue)
