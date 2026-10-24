@@ -124,10 +124,25 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     ?.map((path) => (isAbsolute(path) ? path : join(process.cwd(), path)))
     .forEach((dir) => app.use(sirv(dir, { dev: !isProduction })))
 
-  // CORS
+  // CORS configuration with security controls
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['http://localhost:3000', 'http://localhost:3001']
+
   app
     .use((req, res, next) => {
       return cors({
+        origin: (origin: string | undefined) => {
+          // Allow requests with no origin (like mobile apps or curl requests)
+          if (!origin) return true
+          // Check if origin is in whitelist
+          if (allowedOrigins.includes(origin)) return true
+          // In production, reject unknown origins
+          if (process.env.NODE_ENV === 'production') return false
+          // In development, allow any origin (can be overridden by ALLOWED_ORIGINS)
+          return true
+        },
+        credentials: true,
         allowedHeaders: req.headers['access-control-request-headers']
           ?.split(',')
           .map((h) => h.trim()),
