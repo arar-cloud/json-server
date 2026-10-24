@@ -124,6 +124,28 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     ?.map((path) => (isAbsolute(path) ? path : join(process.cwd(), path)))
     .forEach((dir) => app.use(sirv(dir, { dev: !isProduction })))
 
+  // Security headers middleware to prevent common attacks
+  app.use((req, res, next) => {
+    // Content Security Policy to prevent XSS
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:"
+    )
+    // Prevent MIME-type sniffing
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    // Prevent clickjacking
+    res.setHeader('X-Frame-Options', 'DENY')
+    // Enable XSS filter in browsers
+    res.setHeader('X-XSS-Protection', '1; mode=block')
+    // Enable HSTS in production
+    if (isProduction) {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+    }
+    // Referrer policy
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+    next()
+  })
+
   // CORS configuration with security controls
   const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
