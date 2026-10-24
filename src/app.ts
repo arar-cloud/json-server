@@ -76,9 +76,20 @@ function parseListParams(req: any) {
     }
   }
 
+  // Validate _sort parameter
+  let sort: string | undefined = undefined
+  const sortRaw = params.get('_sort')
+  if (typeof sortRaw === 'string' && sortRaw.length > 0 && sortRaw.length <= 500) {
+    // Allow comma-separated property names and + or - prefix for direction
+    const sortPattern = /^[+\-]?[\w.]+([,\s]*[+\-]?[\w.]+)*$/
+    if (sortPattern.test(sortRaw)) {
+      sort = sortRaw
+    }
+  }
+
   return {
     where,
-    sort: params.get('_sort') ?? undefined,
+    sort,
     page,
     perPage,
     embed: req.query['_embed'],
