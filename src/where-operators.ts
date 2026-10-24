@@ -52,19 +52,35 @@ function executeWhereOperator(
 
   switch (op) {
     case 'lt':
+      // Type validation: ensure numeric comparison
+      if (typeof param !== 'number' || typeof value !== 'number') {
+        return false
+      }
       return param < value
     case 'lte':
+      if (typeof param !== 'number' || typeof value !== 'number') {
+        return false
+      }
       return param <= value
     case 'gt':
+      if (typeof param !== 'number' || typeof value !== 'number') {
+        return false
+      }
       return param > value
     case 'gte':
+      if (typeof param !== 'number' || typeof value !== 'number') {
+        return false
+      }
       return param >= value
     case 'eq':
       return param === value
     case 'ne':
       return param !== value
     case 'in':
-      return Array.isArray(value) && value.includes(param)
+      if (!Array.isArray(value)) {
+        return false
+      }
+      return value.includes(param)
     case 'contains':
       return (
         typeof param === 'string' &&
