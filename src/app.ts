@@ -76,25 +76,16 @@ function parseListParams(req: any) {
   const pageRaw = params.get('_page')
   const perPageRaw = params.get('_per_page')
   
-  // Validate pagination bounds to prevent DoS attacks
-  const maxPage = 1000000
-  const minPerPage = 1
-  const maxPerPage = 100000
-  
   let page: number | undefined = undefined
   let perPage: number | undefined = undefined
   
-  if (pageRaw !== null) {
-    const p = Number.parseInt(pageRaw, 10)
-    if (!Number.isNaN(p) && p >= 1 && p <= maxPage) {
-      page = p
-    }
-  }
-  
-  if (perPageRaw !== null) {
-    const pp = Number.parseInt(perPageRaw, 10)
-    if (!Number.isNaN(pp) && pp >= minPerPage && pp <= maxPerPage) {
-      perPage = pp
+  if (pageRaw !== null || perPageRaw !== null) {
+    try {
+      const validated = validatePaginationParams(pageRaw ?? undefined, perPageRaw ?? undefined)
+      page = validated.page
+      perPage = validated.perPage
+    } catch {
+      // If validation fails, use undefined (will use service defaults)
     }
   }
 
