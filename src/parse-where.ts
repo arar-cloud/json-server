@@ -1,3 +1,19 @@
+// Maximum depth for nested query objects
+const MAX_QUERY_DEPTH = 5
+
+function validateQueryDepth(obj: any, depth = 0): void {
+  if (depth > MAX_QUERY_DEPTH) {
+    throw new Error(`Query nesting depth exceeded maximum of ${MAX_QUERY_DEPTH}`)
+  }
+  if (typeof obj === 'object' && obj !== null && !Array.isArray(obj)) {
+    for (const value of Object.values(obj)) {
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        validateQueryDepth(value, depth + 1)
+      }
+    }
+  }
+}
+
 import { setProperty } from 'dot-prop'
 import type { JsonObject } from 'type-fest'
 
