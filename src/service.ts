@@ -190,13 +190,7 @@ export class Service {
 
   async #updateOrPatch(name: string, body: Item = {}, isPatch: boolean): Promise<Item | undefined> {
     // Validate all property keys to prevent prototype pollution
-    for (const key of Object.keys(body)) {
-      if (!isSafePropertyKey(key)) {
-        throw new Error(
-          `Unsafe property key in request body: ${key}. Cannot update or patch with dangerous properties.`,
-        )
-      }
-    }
+    validateObjectKeys(body)
 
     const item = this.#get(name)
     if (item === undefined || Array.isArray(item)) return
@@ -214,13 +208,7 @@ export class Service {
     isPatch: boolean,
   ): Promise<Item | undefined> {
     // Validate all property keys to prevent prototype pollution
-    for (const key of Object.keys(body)) {
-      if (!isSafePropertyKey(key)) {
-        throw new Error(
-          `Unsafe property key in request body: ${key}. Cannot update or patch with dangerous properties.`,
-        )
-      }
-    }
+    validateObjectKeys(body)
 
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
