@@ -121,12 +121,42 @@ function args(): {
       process.exit();
     }
 
+    // Validate file path
+    const file = positionals[0] ?? ""
+    if (!validateFilePath(file)) {
+      console.log(chalk.red(`Invalid file path: ${file}`));
+      process.exit(1);
+    }
+
+    // Validate port
+    const port = parseInt(values.port as string, 10)
+    if (!validatePort(port)) {
+      console.log(chalk.red(`Invalid port: must be between 1 and 65535`));
+      process.exit(1);
+    }
+
+    // Validate host
+    const host = values.host as string
+    if (!validateHost(host)) {
+      console.log(chalk.red(`Invalid host: ${host}`));
+      process.exit(1);
+    }
+
+    // Validate static paths
+    const staticPaths = (values.static as string[]).filter((p) => {
+      if (!validateFilePath(p)) {
+        console.log(chalk.yellow(`Warning: skipping invalid static path: ${p}`));
+        return false
+      }
+      return true
+    })
+
     // App args and options
     return {
-      file: positionals[0] ?? "",
-      port: parseInt(values.port as string),
-      host: values.host as string,
-      static: values.static as string[],
+      file,
+      port,
+      host,
+      static: staticPaths,
     };
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ERR_PARSE_ARGS_UNKNOWN_OPTION") {
