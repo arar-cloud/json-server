@@ -30,6 +30,33 @@ Options:
 `);
 }
 
+// Validate CLI arguments to prevent injection attacks
+function validateFilePath(path: string): boolean {
+  if (typeof path !== 'string' || path.length === 0 || path.length > 1000) {
+    return false
+  }
+  // Reject paths with suspicious patterns
+  if (path.includes('..') || path.includes('\0') || path.startsWith('/')) {
+    return false
+  }
+  return true
+}
+
+function validatePort(port: number): boolean {
+  return typeof port === 'number' && port > 0 && port < 65536 && port % 1 === 0
+}
+
+function validateHost(host: string): boolean {
+  if (typeof host !== 'string' || host.length === 0 || host.length > 255) {
+    return false
+  }
+  // Allow localhost, IPs, and domain names but reject shell-like patterns
+  if (host.includes(';') || host.includes('&&') || host.includes('|') || host.includes('`')) {
+    return false
+  }
+  return true
+}
+
 // Parse args
 function args(): {
   file: string;
