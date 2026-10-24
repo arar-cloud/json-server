@@ -43,8 +43,29 @@ function parseListParams(req: any) {
   if (typeof rawWhere === 'string') {
     try {
       const parsed = JSON.parse(rawWhere)
-      if (typeof parsed === 'object' && parsed !== null) {
-        where = parsed
+      // Validate _where parameter structure to prevent injection
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        // Ensure only safe keys are present (property keys and known operators)
+        const MAX_WHERE_DEPTH = 5
+        const validateWhereObject = (obj: any, depth = 0): boolean => {
+          if (depth > MAX_WHERE_DEPTH) return false
+          if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return false
+          for (const [k, v] of Object.entries(obj)) {
+            // Reject prototype pollution vectors
+            if (['__proto__', 'constructor', 'prototype', '__constructor__'].includes(k.toLowerCase())) return false
+            // Validate operator values are primitives or nested safe objects
+            if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+              if (!validateWhereObject(v, depth + 1)) return false
+            } else if (Array.isArray(v)) {
+              // Allow arrays for operators like 'in', but validate contents are primitives
+              if (!v.every(item => typeof item !== 'object' || item === null)) return false
+            }
+          }
+          return true
+        }
+        if (validateWhereObject(parsed)) {
+          where = parsed
+        }
       }
     } catch {
       // Ignore invalid JSON and fallback to parsed query params
