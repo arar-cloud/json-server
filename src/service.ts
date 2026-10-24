@@ -229,6 +229,8 @@ export class Service {
   }
 
   async patch(name: string, body: Item = {}): Promise<Item | undefined> {
+    // Validate all property keys to prevent prototype pollution
+    validateObjectKeys(body)
     return this.#updateOrPatch(name, body, true)
   }
 
