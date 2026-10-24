@@ -3,6 +3,31 @@
  */
 
 /**
+ * Validates string input to prevent common injection patterns
+ */
+export function validateStringInput(
+  input: string,
+  maxLength = 1000,
+  allowedPatterns?: RegExp,
+): string {
+  if (typeof input !== 'string') {
+    throw new Error('Input must be a string')
+  }
+  if (input.length === 0 || input.length > maxLength) {
+    throw new Error(`Input length must be between 1 and ${maxLength} characters`)
+  }
+  // Reject null bytes and other control characters
+  if (/[\x00-\x1F\x7F]/.test(input)) {
+    throw new Error('Input contains invalid control characters')
+  }
+  // If pattern provided, validate against it
+  if (allowedPatterns && !allowedPatterns.test(input)) {
+    throw new Error('Input does not match allowed pattern')
+  }
+  return input
+}
+
+/**
  * Validates and bounds pagination parameters to prevent DoS attacks
  */
 export function validatePaginationParams(
