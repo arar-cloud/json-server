@@ -14,6 +14,19 @@ export function isItem(obj: unknown): obj is Item {
   return typeof obj === 'object' && obj !== null && !Array.isArray(obj)
 }
 
+/**
+ * Validates that a property key is safe and not a prototype pollution vector
+ */
+function isSafePropertyKey(key: string): boolean {
+  const dangerousKeys = [
+    '__proto__',
+    'constructor',
+    'prototype',
+    '__constructor__',
+  ]
+  return !dangerousKeys.includes(key.toLowerCase())
+}
+
 export type PaginatedItems = PaginationResult<Item>
 
 function ensureArray(arg: string | string[] = []): string[] {
