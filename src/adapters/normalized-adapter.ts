@@ -26,11 +26,8 @@ export class NormalizedAdapter implements Adapter<Data> {
 
     for (const [key, value] of Object.entries(data)) {
       // Validate key to prevent prototype pollution
-      if (
-        key === '__proto__' ||
-        key === 'constructor' ||
-        key === 'prototype'
-      ) {
+      const dangerousKeys = ['__proto__', 'constructor', 'prototype', '__constructor__']
+      if (dangerousKeys.includes(key)) {
         throw new Error(
           `Invalid data structure detected: unsafe key "${key}" in adapter read`,
         )
