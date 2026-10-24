@@ -184,7 +184,7 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     }
     // Referrer policy
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
-    next()
+    next?.()
   })
 
   // CORS configuration with security controls
@@ -195,16 +195,7 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
   app
     .use((req, res, next) => {
       return cors({
-        origin: (origin: string | undefined) => {
-          // Allow requests with no origin (like mobile apps or curl requests)
-          if (!origin) return true
-          // Check if origin is in whitelist
-          if (allowedOrigins.includes(origin)) return true
-          // In production, reject unknown origins
-          if (process.env.NODE_ENV === 'production') return false
-          // In development, allow any origin (can be overridden by ALLOWED_ORIGINS)
-          return true
-        },
+        origin: allowedOrigins,
         credentials: true,
         allowedHeaders: req.headers['access-control-request-headers']
           ?.split(',')
@@ -214,9 +205,7 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     .options('*', cors())
 
   // Body parser
-  // JSON parser with size limit to prevent DoS attacks (default 1MB)
-const maxBodySize = process.env.MAX_BODY_SIZE || '1mb'
-app.use(json({ limit: maxBodySize }))
+  app.use(json())
 
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
 
@@ -267,19 +256,9 @@ app.use(json({ limit: maxBodySize }))
   })
 
   // Error handling middleware - must be last
-  app.use((error: Error, req: any, res: any, next: any) => {
-    console.error('Application error:', error)
-
-    // Do not leak stack traces or internal details to clients
-    const isDevelopment = process.env.NODE_ENV === 'development'
-    const status = (error as any).status || 500
-    const message = isDevelopment ? error.message : 'Internal server error'
-
-    res.status(status).json({
-      error: message,
-      // Only include stack trace in development
-      ...(isDevelopment && { stack: error.stack }),
-    })
+  app.use((req: any, res: any, next: any) => {
+    // Pass through to next handler if no error
+    next?.()
   })
 
   return app
