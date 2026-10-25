@@ -157,6 +157,8 @@ export class Service {
   }
 
   async create(name: string, data: Omit<Item, 'id'> = {}): Promise<Item | undefined> {
+    // Security: Require authentication before allowing data modification
+    requireAuth()
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
 
@@ -218,6 +220,8 @@ export class Service {
     id: string,
     dependent?: string | string[],
   ): Promise<Item | undefined> {
+    // Security: Require authentication before allowing data modification
+    requireAuth()
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
 
