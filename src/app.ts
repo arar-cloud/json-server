@@ -74,8 +74,10 @@ function parseListParams(req: any) {
         throw new Error('_where must be a JSON object')
       }
     } catch (e) {
-      // Ignore invalid JSON and fallback to parsed query params
-      console.warn('Invalid _where parameter:', e instanceof Error ? e.message : String(e))
+      // Log error and reject instead of silent fallback to prevent injection
+      const errorMsg = e instanceof Error ? e.message : String(e)
+      console.error('Invalid _where parameter (rejected):', errorMsg)
+      throw new Error(`Invalid _where parameter: ${errorMsg}`)
     }
   }
 
