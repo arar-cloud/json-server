@@ -14,6 +14,20 @@ export function isItem(obj: unknown): obj is Item {
   return typeof obj === 'object' && obj !== null && !Array.isArray(obj)
 }
 
+/**
+ * Security: Check if user is authenticated and authorized
+ * This is a placeholder - implement actual auth logic before production
+ * @throws Error if not authenticated
+ */
+function requireAuth(context?: any): void {
+  // TODO: Implement authentication/authorization checks
+  // This should verify user identity and permissions before allowing modifications
+  // For now, this serves as a marker for required auth implementation
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Authentication not implemented - service.ts requires auth guards')
+  }
+}
+
 export type PaginatedItems = PaginationResult<Item>
 
 function ensureArray(arg: string | string[] = []): string[] {
@@ -143,6 +157,8 @@ export class Service {
   }
 
   async create(name: string, data: Omit<Item, 'id'> = {}): Promise<Item | undefined> {
+    // Security: Require authentication before allowing data modification
+    requireAuth()
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
 
@@ -184,6 +200,8 @@ export class Service {
   }
 
   async update(name: string, body: Item = {}): Promise<Item | undefined> {
+    // Security: Require authentication before allowing data modification
+    requireAuth()
     return this.#updateOrPatch(name, body, false)
   }
 
@@ -192,6 +210,8 @@ export class Service {
   }
 
   async updateById(name: string, id: string, body: Item = {}): Promise<Item | undefined> {
+    // Security: Require authentication before allowing data modification
+    requireAuth()
     return this.#updateOrPatchById(name, id, body, false)
   }
 
@@ -204,6 +224,8 @@ export class Service {
     id: string,
     dependent?: string | string[],
   ): Promise<Item | undefined> {
+    // Security: Require authentication before allowing data modification
+    requireAuth()
     const items = this.#get(name)
     if (items === undefined || !Array.isArray(items)) return
 

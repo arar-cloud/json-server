@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { extname } from "node:path";
+import { extname, resolve, normalize } from "node:path";
 import { parseArgs } from "node:util";
 
 import chalk from "chalk";
@@ -31,6 +31,35 @@ Options:
 }
 
 // Parse args
+/**
+ * Validate database file path to prevent path traversal attacks
+ */
+function validateDbPath(filePath: string): string {
+  if (!filePath) {
+    throw new Error('Database file path is required')
+  }
+  
+  // Reject absolute paths
+  if (filePath.startsWith('/')) {
+    throw new Error('Absolute paths are not allowed')
+  }
+  
+  // Reject path traversal attempts
+  if (filePath.includes('..')) {
+    throw new Error('Path traversal sequences (..) are not allowed')
+  }
+  
+  // Resolve to current working directory and verify it stays within bounds
+  const resolved = resolve(normalize(filePath))
+  const cwd = resolve(process.cwd())
+  
+  if (!resolved.startsWith(cwd)) {
+    throw new Error('Database path must be within the current working directory')
+  }
+  
+  return resolved
+}
+
 function args(): {
   file: string;
   port: number;
@@ -94,9 +123,19 @@ function args(): {
       process.exit();
     }
 
+    // Validate database file path
+    const dbFile = positionals[0] ?? "";
+    let validatedFile: string;
+    try {
+      validatedFile = validateDbPath(dbFile);
+    } catch (err) {
+      console.error(chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`))
+      process.exit(1);
+    }
+
     // App args and options
     return {
-      file: positionals[0] ?? "",
+      file: validatedFile,
       port: parseInt(values.port as string),
       host: values.host as string,
       static: values.static as string[],

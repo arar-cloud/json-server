@@ -18,6 +18,7 @@ const isProduction = process.env['NODE_ENV'] === 'production'
 export type AppOptions = {
   logger?: boolean
   static?: string[]
+  corsOrigins?: string[] // Whitelisted CORS origins
 }
 
 const eta = new Eta({
@@ -38,16 +39,46 @@ function parseListParams(req: any) {
     }
   }
 
+  // Sanitize sort parameter to prevent injection attacks
+  const sortParam = params.get('_sort')
+  if (sortParam) {
+    const MAX_SORT_FIELDS = 10
+    const SORT_FIELD_PATTERN = /^[a-zA-Z0-9._\-]+$/
+    let sortFields = sortParam.split(',')
+    
+    // Limit number of sort fields
+    if (sortFields.length > MAX_SORT_FIELDS) {
+      throw new Error(`Maximum ${MAX_SORT_FIELDS} sort fields allowed`)
+    }
+    
+    // Validate each sort field name
+    for (const field of sortFields) {
+      if (!SORT_FIELD_PATTERN.test(field.trim())) {
+        throw new Error(`Invalid sort field: ${field}`)
+      }
+    }
+  }
+
   let where = parseWhere(filterParams.toString())
   const rawWhere = params.get('_where')
   if (typeof rawWhere === 'string') {
+    // Security: Limit _where parameter size to prevent memory exhaustion
+    const MAX_WHERE_SIZE = 10000
+    if (rawWhere.length > MAX_WHERE_SIZE) {
+      throw new Error('_where parameter exceeds maximum size')
+    }
     try {
       const parsed = JSON.parse(rawWhere)
-      if (typeof parsed === 'object' && parsed !== null) {
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
         where = parsed
+      } else {
+        throw new Error('_where must be a JSON object')
       }
-    } catch {
-      // Ignore invalid JSON and fallback to parsed query params
+    } catch (e) {
+      // Log error and reject instead of silent fallback to prevent injection
+      const errorMsg = e instanceof Error ? e.message : String(e)
+      console.error('Invalid _where parameter (rejected):', errorMsg)
+      throw new Error(`Invalid _where parameter: ${errorMsg}`)
     }
   }
 
@@ -55,6 +86,19 @@ function parseListParams(req: any) {
   const perPageRaw = params.get('_per_page')
   const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
   const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
+
+  // Pagination bounds validation to prevent memory exhaustion
+  const MIN_PAGE = 1
+  const MAX_PAGE = 1000000
+  const MIN_PER_PAGE = 1
+  const MAX_PER_PAGE = 10000
+  
+  if (page !== undefined && (Number.isNaN(page) || page < MIN_PAGE || page > MAX_PAGE)) {
+    throw new Error(`_page must be between ${MIN_PAGE} and ${MAX_PAGE}`)
+  }
+  if (perPage !== undefined && (Number.isNaN(perPage) || perPage < MIN_PER_PAGE || perPage > MAX_PER_PAGE)) {
+    throw new Error(`_per_page must be between ${MIN_PER_PAGE} and ${MAX_PER_PAGE}`)
+  }
 
   return {
     where,
@@ -104,18 +148,49 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     ?.map((path) => (isAbsolute(path) ? path : join(process.cwd(), path)))
     .forEach((dir) => app.use(sirv(dir, { dev: !isProduction })))
 
-  // CORS
+  // CORS with origin whitelisting
+  const corsOrigins = options.corsOrigins || ['*'] // Default allows all origins; restrict in production
   app
     .use((req, res, next) => {
+      const origin = req.headers['origin']
+      const allowOrigin = corsOrigins.includes('*') || (origin && corsOrigins.includes(origin))
+      
       return cors({
+        origin: allowOrigin ? origin || '*' : undefined,
         allowedHeaders: req.headers['access-control-request-headers']
           ?.split(',')
           .map((h) => h.trim()),
+        credentials: false, // Only set to true if origin is whitelisted
       })(req, res, next)
     })
-    .options('*', cors())
+    .options('*', cors({ origin: '*' }))
 
-  // Body parser
+  // Body parser with security validation
+  const MAX_BODY_SIZE = 1048576 // 1MB
+  const MAX_NESTING_DEPTH = 20
+  
+  function validateBodyDepth(obj: unknown, depth: number = 0): boolean {
+    if (depth > MAX_NESTING_DEPTH) return false
+    if (typeof obj !== 'object' || obj === null) return true
+    if (Array.isArray(obj)) {
+      return obj.every(item => validateBodyDepth(item, depth + 1))
+    }
+    return Object.values(obj).every(value => validateBodyDepth(value, depth + 1))
+  }
+  
+  app.use((req, res, next) => {
+    if (req.body && typeof req.body === 'object') {
+      const bodySize = JSON.stringify(req.body).length
+      if (bodySize > MAX_BODY_SIZE) {
+        return res.status(413).json({ error: 'Request body exceeds maximum size' })
+      }
+      if (!validateBodyDepth(req.body)) {
+        return res.status(400).json({ error: 'Request body has excessive nesting depth' })
+      }
+    }
+    next?.()
+  })
+  
   app.use(json())
 
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
