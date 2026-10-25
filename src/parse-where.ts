@@ -70,9 +70,25 @@ function coerceValue(value: string): string | number | boolean | null {
   return value
 }
 
-export function parseWhere(query: string): JsonObject {
+export function parseWhere(query: string, depth: number = 0): JsonObject {
+  // Validate input size to prevent memory exhaustion
+  if (query.length > MAX_EXPRESSION_SIZE) {
+    throw new Error(`Filter expression exceeds maximum size of ${MAX_EXPRESSION_SIZE} characters`)
+  }
+
+  // Enforce recursion depth limit
+  if (depth > MAX_FILTER_DEPTH) {
+    throw new Error(`Filter nesting depth exceeds maximum of ${MAX_FILTER_DEPTH}`)
+  }
+
   const out: JsonObject = {}
   const params = new URLSearchParams(query)
+
+  // Limit number of filter parameters
+  const paramCount = Array.from(params.keys()).length
+  if (paramCount > MAX_FILTER_PARAMS) {
+    throw new Error(`Number of filter parameters exceeds maximum of ${MAX_FILTER_PARAMS}`)
+  }
 
   for (const [rawKey, rawValue] of params.entries()) {
     const { path, op } = splitKey(rawKey)
