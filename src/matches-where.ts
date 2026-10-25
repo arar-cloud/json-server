@@ -36,6 +36,11 @@ function getKnownOperators(value: unknown): WhereOperator[] {
 
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
   for (const [key, value] of Object.entries(where)) {
+    // Reject filter attempts on dangerous properties
+    if (!isSafeProperty(key)) {
+      return false
+    }
+    
     if (key === 'or') {
       if (!Array.isArray(value) || value.length === 0) return false
 
