@@ -136,7 +136,32 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     })
     .options('*', cors())
 
-  // Body parser
+  // Body parser with security validation
+  const MAX_BODY_SIZE = 1048576 // 1MB
+  const MAX_NESTING_DEPTH = 20
+  
+  function validateBodyDepth(obj: unknown, depth: number = 0): boolean {
+    if (depth > MAX_NESTING_DEPTH) return false
+    if (typeof obj !== 'object' || obj === null) return true
+    if (Array.isArray(obj)) {
+      return obj.every(item => validateBodyDepth(item, depth + 1))
+    }
+    return Object.values(obj).every(value => validateBodyDepth(value, depth + 1))
+  }
+  
+  app.use((req, res, next) => {
+    if (req.body && typeof req.body === 'object') {
+      const bodySize = JSON.stringify(req.body).length
+      if (bodySize > MAX_BODY_SIZE) {
+        return res.status(413).json({ error: 'Request body exceeds maximum size' })
+      }
+      if (!validateBodyDepth(req.body)) {
+        return res.status(400).json({ error: 'Request body has excessive nesting depth' })
+      }
+    }
+    next()
+  })
+  
   app.use(json())
 
   app.get('/', (_req, res) => res.send(eta.render('index.html', { data: db.data })))
