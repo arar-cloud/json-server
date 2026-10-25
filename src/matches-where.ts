@@ -4,8 +4,21 @@ import { WHERE_OPERATORS, type WhereOperator } from './where-operators.ts'
 
 type OperatorObject = Partial<Record<WhereOperator, unknown>>
 
+// Dangerous properties that should not be accessed in filters
+const DANGEROUS_PROPERTIES = new Set([
+  '__proto__',
+  'constructor',
+  'prototype',
+  '__proto__',
+  'constructor.prototype',
+])
+
 function isJSONObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isSafeProperty(key: string): boolean {
+  return !DANGEROUS_PROPERTIES.has(key) && !key.startsWith('__')
 }
 
 function getKnownOperators(value: unknown): WhereOperator[] {
