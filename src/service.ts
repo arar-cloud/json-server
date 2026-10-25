@@ -14,6 +14,20 @@ export function isItem(obj: unknown): obj is Item {
   return typeof obj === 'object' && obj !== null && !Array.isArray(obj)
 }
 
+/**
+ * Security: Check if user is authenticated and authorized
+ * This is a placeholder - implement actual auth logic before production
+ * @throws Error if not authenticated
+ */
+function requireAuth(context?: any): void {
+  // TODO: Implement authentication/authorization checks
+  // This should verify user identity and permissions before allowing modifications
+  // For now, this serves as a marker for required auth implementation
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Authentication not implemented - service.ts requires auth guards')
+  }
+}
+
 export type PaginatedItems = PaginationResult<Item>
 
 function ensureArray(arg: string | string[] = []): string[] {
