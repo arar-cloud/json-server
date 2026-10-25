@@ -21,6 +21,21 @@ function isSafeProperty(key: string): boolean {
   return !DANGEROUS_PROPERTIES.has(key) && !key.startsWith('__')
 }
 
+/**
+ * Perform strict type coercion check to prevent bypass via type equivalence
+ */
+function strictEquals(a: unknown, b: unknown): boolean {
+  // Strict type and value check
+  if (typeof a !== typeof b) return false
+  
+  // Handle NaN case (NaN !== NaN in JS)
+  if (typeof a === 'number' && Number.isNaN(a) && Number.isNaN(b as number)) {
+    return true
+  }
+  
+  return a === b
+}
+
 function getKnownOperators(value: unknown): WhereOperator[] {
   if (!isJSONObject(value)) return []
 
@@ -70,6 +85,15 @@ export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
     }
 
     const field = (obj as Record<string, unknown>)[key]
+
+    // Type coercion protection: if where value is not an object with operators,
+    // use strict comparison
+    if (!isJSONObject(value)) {
+      if (!strictEquals(field, value)) {
+        return false
+      }
+      continue
+    }
 
     if (isJSONObject(value)) {
       const knownOps = getKnownOperators(value)
