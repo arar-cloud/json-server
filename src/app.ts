@@ -179,7 +179,7 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
         return res.status(400).json({ error: 'Request body has excessive nesting depth' })
       }
     }
-    next()
+    next?.()
   })
   
   app.use(json())

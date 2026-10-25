@@ -13,6 +13,7 @@ export const WHERE_OPERATORS = [
   'contains',
   'startsWith',
   'endsWith',
+  'regex',
 ] as const
 
 export type WhereOperator = (typeof WHERE_OPERATORS)[number]
@@ -37,7 +38,7 @@ export const whereOperators = {
       if (!Number.isFinite(a) || !Number.isFinite(b)) return false
       if (a < MIN_SAFE_INT || a > MAX_SAFE_INT || b < MIN_SAFE_INT || b > MAX_SAFE_INT) return false
     }
-    return a < b
+    return (a as string | number) < (b as string | number)
   },
   lte: (a: unknown, b: unknown) => {
     // Validate numeric bounds for comparison operators
@@ -45,7 +46,7 @@ export const whereOperators = {
       if (!Number.isFinite(a) || !Number.isFinite(b)) return false
       if (a < MIN_SAFE_INT || a > MAX_SAFE_INT || b < MIN_SAFE_INT || b > MAX_SAFE_INT) return false
     }
-    return a <= b
+    return (a as string | number) <= (b as string | number)
   },
   gt: (a: unknown, b: unknown) => {
     // Validate numeric bounds for comparison operators
@@ -53,7 +54,7 @@ export const whereOperators = {
       if (!Number.isFinite(a) || !Number.isFinite(b)) return false
       if (a < MIN_SAFE_INT || a > MAX_SAFE_INT || b < MIN_SAFE_INT || b > MAX_SAFE_INT) return false
     }
-    return a > b
+    return (a as string | number) > (b as string | number)
   },
   gte: (a: unknown, b: unknown) => {
     // Validate numeric bounds for comparison operators
@@ -61,7 +62,7 @@ export const whereOperators = {
       if (!Number.isFinite(a) || !Number.isFinite(b)) return false
       if (a < MIN_SAFE_INT || a > MAX_SAFE_INT || b < MIN_SAFE_INT || b > MAX_SAFE_INT) return false
     }
-    return a >= b
+    return (a as string | number) >= (b as string | number)
   },
   in: (a: unknown, b: unknown) => Array.isArray(b) && b.includes(a),
   contains: (a: unknown, b: unknown) => typeof a === 'string' && typeof b === 'string' && a.includes(b),
