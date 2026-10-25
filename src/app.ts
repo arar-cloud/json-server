@@ -64,6 +64,19 @@ function parseListParams(req: any) {
   const page = pageRaw === null ? undefined : Number.parseInt(pageRaw, 10)
   const perPage = perPageRaw === null ? undefined : Number.parseInt(perPageRaw, 10)
 
+  // Pagination bounds validation to prevent memory exhaustion
+  const MIN_PAGE = 1
+  const MAX_PAGE = 1000000
+  const MIN_PER_PAGE = 1
+  const MAX_PER_PAGE = 10000
+  
+  if (page !== undefined && (Number.isNaN(page) || page < MIN_PAGE || page > MAX_PAGE)) {
+    throw new Error(`_page must be between ${MIN_PAGE} and ${MAX_PAGE}`)
+  }
+  if (perPage !== undefined && (Number.isNaN(perPage) || perPage < MIN_PER_PAGE || perPage > MAX_PER_PAGE)) {
+    throw new Error(`_per_page must be between ${MIN_PER_PAGE} and ${MAX_PER_PAGE}`)
+  }
+
   return {
     where,
     sort: params.get('_sort') ?? undefined,
