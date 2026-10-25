@@ -200,6 +200,8 @@ export class Service {
   }
 
   async update(name: string, body: Item = {}): Promise<Item | undefined> {
+    // Security: Require authentication before allowing data modification
+    requireAuth()
     return this.#updateOrPatch(name, body, false)
   }
 
@@ -208,6 +210,8 @@ export class Service {
   }
 
   async updateById(name: string, id: string, body: Item = {}): Promise<Item | undefined> {
+    // Security: Require authentication before allowing data modification
+    requireAuth()
     return this.#updateOrPatchById(name, id, body, false)
   }
 
