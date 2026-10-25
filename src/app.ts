@@ -41,13 +41,21 @@ function parseListParams(req: any) {
   let where = parseWhere(filterParams.toString())
   const rawWhere = params.get('_where')
   if (typeof rawWhere === 'string') {
+    // Security: Limit _where parameter size to prevent memory exhaustion
+    const MAX_WHERE_SIZE = 10000
+    if (rawWhere.length > MAX_WHERE_SIZE) {
+      throw new Error('_where parameter exceeds maximum size')
+    }
     try {
       const parsed = JSON.parse(rawWhere)
-      if (typeof parsed === 'object' && parsed !== null) {
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
         where = parsed
+      } else {
+        throw new Error('_where must be a JSON object')
       }
-    } catch {
+    } catch (e) {
       // Ignore invalid JSON and fallback to parsed query params
+      console.warn('Invalid _where parameter:', e instanceof Error ? e.message : String(e))
     }
   }
 
