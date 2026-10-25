@@ -3,6 +3,12 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
+// Security constants to prevent DoS attacks
+const MAX_FILTER_DEPTH = 10
+const MAX_EXPRESSION_SIZE = 10000 // characters
+const MAX_FIELD_NAME_LENGTH = 256
+const MAX_FILTER_PARAMS = 100
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
