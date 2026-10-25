@@ -18,6 +18,7 @@ const isProduction = process.env['NODE_ENV'] === 'production'
 export type AppOptions = {
   logger?: boolean
   static?: string[]
+  corsOrigins?: string[] // Whitelisted CORS origins
 }
 
 const eta = new Eta({
@@ -147,16 +148,22 @@ export function createApp(db: Low<Data>, options: AppOptions = {}) {
     ?.map((path) => (isAbsolute(path) ? path : join(process.cwd(), path)))
     .forEach((dir) => app.use(sirv(dir, { dev: !isProduction })))
 
-  // CORS
+  // CORS with origin whitelisting
+  const corsOrigins = options.corsOrigins || ['*'] // Default allows all origins; restrict in production
   app
     .use((req, res, next) => {
+      const origin = req.headers['origin']
+      const allowOrigin = corsOrigins.includes('*') || (origin && corsOrigins.includes(origin))
+      
       return cors({
+        origin: allowOrigin ? origin || '*' : undefined,
         allowedHeaders: req.headers['access-control-request-headers']
           ?.split(',')
           .map((h) => h.trim()),
+        credentials: false, // Only set to true if origin is whitelisted
       })(req, res, next)
     })
-    .options('*', cors())
+    .options('*', cors({ origin: '*' }))
 
   // Body parser with security validation
   const MAX_BODY_SIZE = 1048576 // 1MB
