@@ -1,3 +1,7 @@
+// Maximum safe integer for numeric comparisons
+const MAX_SAFE_INT = Number.MAX_SAFE_INTEGER
+const MIN_SAFE_INT = Number.MIN_SAFE_INTEGER
+
 export const WHERE_OPERATORS = [
   'lt',
   'lte',
