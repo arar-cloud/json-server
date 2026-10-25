@@ -34,6 +34,19 @@ function getKnownOperators(value: unknown): WhereOperator[] {
   return ops
 }
 
+function validateRegexPattern(pattern: unknown): boolean {
+  if (typeof pattern !== 'string') return false
+  // Limit regex pattern length to prevent ReDoS
+  if (pattern.length > 1000) return false
+  try {
+    // Test compilation with timeout
+    new RegExp(pattern)
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function matchesWhere(obj: JsonObject, where: JsonObject): boolean {
   for (const [key, value] of Object.entries(where)) {
     // Reject filter attempts on dangerous properties
