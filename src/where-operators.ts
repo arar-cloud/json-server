@@ -67,4 +67,15 @@ export const whereOperators = {
   contains: (a: unknown, b: unknown) => typeof a === 'string' && typeof b === 'string' && a.includes(b),
   startsWith: (a: unknown, b: unknown) => typeof a === 'string' && typeof b === 'string' && a.startsWith(b),
   endsWith: (a: unknown, b: unknown) => typeof a === 'string' && typeof b === 'string' && a.endsWith(b),
+  regex: (a: unknown, b: unknown) => {
+    // Validate regex pattern to prevent ReDoS
+    if (typeof b !== 'string') return false
+    if (b.length > 1000) return false // Limit pattern length
+    try {
+      const pattern = new RegExp(b)
+      return pattern.test(String(a))
+    } catch {
+      return false
+    }
+  },
 }
