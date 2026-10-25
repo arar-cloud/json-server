@@ -38,6 +38,26 @@ function parseListParams(req: any) {
     }
   }
 
+  // Sanitize sort parameter to prevent injection attacks
+  const sortParam = params.get('_sort')
+  if (sortParam) {
+    const MAX_SORT_FIELDS = 10
+    const SORT_FIELD_PATTERN = /^[a-zA-Z0-9._\-]+$/
+    let sortFields = sortParam.split(',')
+    
+    // Limit number of sort fields
+    if (sortFields.length > MAX_SORT_FIELDS) {
+      throw new Error(`Maximum ${MAX_SORT_FIELDS} sort fields allowed`)
+    }
+    
+    // Validate each sort field name
+    for (const field of sortFields) {
+      if (!SORT_FIELD_PATTERN.test(field.trim())) {
+        throw new Error(`Invalid sort field: ${field}`)
+      }
+    }
+  }
+
   let where = parseWhere(filterParams.toString())
   const rawWhere = params.get('_where')
   if (typeof rawWhere === 'string') {
