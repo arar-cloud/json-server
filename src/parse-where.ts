@@ -10,6 +10,11 @@ const MAX_FIELD_NAME_LENGTH = 256
 const MAX_FILTER_PARAMS = 100
 
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
+  // Validate key length to prevent expression size attacks
+  if (key.length > MAX_FIELD_NAME_LENGTH) {
+    throw new Error(`Field name exceeds maximum length of ${MAX_FIELD_NAME_LENGTH}`)
+  }
+  
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
     const path = key.slice(0, colonIdx)
@@ -18,7 +23,11 @@ function splitKey(key: string): { path: string; op: WhereOperator | null } {
       return { path: key, op: 'eq' }
     }
 
-    return isWhereOperator(op) ? { path, op } : { path, op: null }
+    // Strict operator validation: reject if not in allowlist
+    if (!isWhereOperator(op)) {
+      throw new Error(`Invalid operator: ${op}`)
+    }
+    return { path, op }
   }
 
   // Compatibility with v0.17 operator style (e.g. _lt, _gt)
