@@ -20,6 +20,18 @@ function ensureArray(arg: string | string[] = []): string[] {
   return Array.isArray(arg) ? arg : [arg]
 }
 
+function filterSortThenPaginate(
+  items: Item[],
+  where: JsonObject,
+  sort: string[],
+  page: number,
+  perPage: number,
+): PaginatedItems {
+  const filtered = items.filter((item) => matchesWhere(item as JsonObject, where))
+  const sorted = sort.length > 0 ? sortOn(filtered, sort) : filtered
+  return paginate(sorted, page, perPage)
+}
+
 function embed(db: Low<Data>, name: string, item: Item, related: string): Item {
   if (inflection.singularize(related) === related) {
     const relatedData = db.data[inflection.pluralize(related)] as Item[]
