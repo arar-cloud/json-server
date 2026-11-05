@@ -3,6 +3,12 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
+const FORBIDDEN_PATH_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype'])
+
+function hasForbiddenSegment(path: string): boolean {
+  return path.split('.').some((segment) => FORBIDDEN_PATH_SEGMENTS.has(segment))
+}
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
