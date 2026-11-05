@@ -3,7 +3,19 @@ import type { JsonObject } from 'type-fest'
 
 import { isWhereOperator, type WhereOperator } from './where-operators.ts'
 
+const UNSAFE_KEY_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype'])
+
+function assertSafeKeyPath(key: string): void {
+  for (const rawSegment of key.split('.')) {
+    const segment = rawSegment.split(':')[0]
+    if (UNSAFE_KEY_SEGMENTS.has(segment)) {
+      throw new Error(`Unsafe key segment in where clause: ${segment}`)
+    }
+  }
+}
+
 function splitKey(key: string): { path: string; op: WhereOperator | null } {
+  assertSafeKeyPath(key)
   const colonIdx = key.lastIndexOf(':')
   if (colonIdx !== -1) {
     const path = key.slice(0, colonIdx)
