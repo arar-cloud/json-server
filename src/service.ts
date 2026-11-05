@@ -21,6 +21,9 @@ function ensureArray(arg: string | string[] = []): string[] {
 }
 
 function embed(db: Low<Data>, name: string, item: Item, related: string): Item {
+  if (['__proto__', 'constructor', 'prototype'].includes(related)) {
+    throw new Error(`Unsafe relation name: ${related}`)
+  }
   if (inflection.singularize(related) === related) {
     const relatedData = db.data[inflection.pluralize(related)] as Item[]
     if (!relatedData) {
